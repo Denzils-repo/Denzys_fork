@@ -155,16 +155,23 @@ StyledRect {
                     implicitWidth: implicitHeight
                     implicitHeight: text.implicitHeight + Tokens.padding.small
 
-                    // Selected non-today indicator background
-                    StyledRect {
-                        visible: dayItem.isSelected && !dayItem.model.today
+                    // Selected date indicator: Solid 4-leaf clover with continuous slow rotation
+                    MaterialShape {
+                        id: selectedShape
+                        visible: dayItem.isSelected
                         anchors.centerIn: parent
-                        implicitWidth: Math.min(parent.width, parent.height) - 4
-                        implicitHeight: Math.min(parent.width, parent.height) - 4
-                        radius: Tokens.rounding.full
-                        color: Colours.palette.m3primaryContainer
-                        border.width: 1.5
-                        border.color: Colours.palette.m3primary
+                        implicitSize: Math.max(20, Math.min(parent.width, parent.height) - 2)
+                        shape: MaterialShape.Clover4Leaf
+                        color: Colours.palette.m3primary
+                        z: 1
+
+                        NumberAnimation on rotation {
+                            running: dayItem.isSelected
+                            from: 0
+                            to: 360
+                            duration: 10000
+                            loops: Animation.Infinite
+                        }
                     }
 
                     StyledText {
@@ -173,15 +180,16 @@ StyledRect {
                         horizontalAlignment: Text.AlignHCenter
                         text: grid.locale.toString(dayItem.model.day)
                         color: {
-                            if (dayItem.isSelected && !dayItem.model.today)
-                                return Colours.palette.m3onPrimaryContainer;
+                            if (dayItem.isSelected)
+                                return Colours.palette.m3onPrimary;
                             if (dayItem.dayOfWeek === 0 || dayItem.dayOfWeek === 6)
                                 return Colours.palette.m3tertiary;
                             return Colours.palette.m3onSurfaceVariant;
                         }
-                        opacity: dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
-                        font: dayItem.isSelected ? Tokens.font.body.builders.small.weight(Font.Bold).build() : Tokens.font.body.small
+                        opacity: dayItem.isSelected || dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
+                        font: (dayItem.isSelected || dayItem.model.today) ? Tokens.font.body.builders.small.weight(Font.Bold).build() : Tokens.font.body.small
                         renderType: Text.QtRendering
+                        z: 2
                     }
 
                     TapHandler {
@@ -197,6 +205,12 @@ StyledRect {
                 readonly property Item todayItem: grid.contentItem.children.find(c => c.model && c.model.today) ?? null
                 property Item today
 
+                readonly property bool isTodaySelected: {
+                    if (!root.currentDateStr || root.currentDateStr.length === 0) return false;
+                    const now = new Date();
+                    return root.currentDateStr === root.formatDate(now);
+                }
+
                 onTodayItemChanged: {
                     if (todayItem)
                         today = todayItem;
@@ -210,7 +224,7 @@ StyledRect {
 
                 clip: true
                 color: Colours.palette.m3primary
-                opacity: todayItem ? 1 : 0
+                opacity: (todayItem && !isTodaySelected) ? 1 : 0
 
                 Colouriser {
                     x: -todayIndicator.x
