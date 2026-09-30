@@ -306,7 +306,9 @@ Item {
 
                             StyledText {
                                 id: codeText
-                                anchors.fill: parent
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
                                 anchors.margins: 8
                                 text: (blockItem.modelData && blockItem.modelData.content) || ""
                                 font.family: "Monospace"

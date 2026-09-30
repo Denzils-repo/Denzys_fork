@@ -22,6 +22,15 @@ Item {
 
     readonly property bool isList: viewMode === "list"
     readonly property bool hasCustomColor: !!(note && note.color && note.color !== "none")
+    readonly property bool isHovered: stateLayer.containsMouse || rootHoverHandler.hovered
+
+    HoverHandler {
+        id: rootHoverHandler
+    }
+
+    TapHandler {
+        onTapped: root.clicked()
+    }
 
     readonly property color accentColor: {
         if (!note || !note.color || note.color === "none") return Colours.palette.m3primary;
@@ -64,14 +73,14 @@ Item {
                       : Qt.alpha(Colours.palette.m3outlineVariant, 0.40)
 
         x: frontCard.x + (root.isList
-           ? (stateLayer.containsMouse ? 9 : 6)
-           : (stateLayer.containsMouse ? 12 : 8))
+           ? (root.isHovered ? 9 : 6)
+           : (root.isHovered ? 12 : 8))
         y: frontCard.y - (root.isList
-           ? (stateLayer.containsMouse ? 5.5 : 3.8)
-           : (stateLayer.containsMouse ? 9 : 6))
+           ? (root.isHovered ? 5.5 : 3.8)
+           : (root.isHovered ? 9 : 6))
         rotation: root.isList
-           ? (stateLayer.containsMouse ? 3.0 : 1.8)
-           : (stateLayer.containsMouse ? 5.8 : 3.6)
+           ? (root.isHovered ? 3.0 : 1.8)
+           : (root.isHovered ? 5.8 : 3.6)
         transformOrigin: Item.BottomLeft
 
         Behavior on x { Anim { type: Anim.DefaultSpatial } }
@@ -94,14 +103,14 @@ Item {
                       : Qt.alpha(Colours.palette.m3outlineVariant, 0.55)
 
         x: frontCard.x + (root.isList
-           ? (stateLayer.containsMouse ? 4.5 : 3)
-           : (stateLayer.containsMouse ? 6 : 4))
+           ? (root.isHovered ? 4.5 : 3)
+           : (root.isHovered ? 6 : 4))
         y: frontCard.y - (root.isList
-           ? (stateLayer.containsMouse ? 3 : 2)
-           : (stateLayer.containsMouse ? 4.5 : 3))
+           ? (root.isHovered ? 3 : 2)
+           : (root.isHovered ? 4.5 : 3))
         rotation: root.isList
-           ? (stateLayer.containsMouse ? 1.6 : 1.0)
-           : (stateLayer.containsMouse ? 3.0 : 1.8)
+           ? (root.isHovered ? 1.6 : 1.0)
+           : (root.isHovered ? 3.0 : 1.8)
         transformOrigin: Item.BottomLeft
 
         Behavior on x { Anim { type: Anim.DefaultSpatial } }
@@ -113,10 +122,10 @@ Item {
     RectangularShadow {
         anchors.fill: frontCard
         radius: frontCard.radius
-        color: Qt.alpha(Colours.palette.m3shadow, stateLayer.containsMouse ? 0.22 : 0.12)
-        blur: stateLayer.containsMouse ? 8 : 4
-        offset.y: stateLayer.containsMouse ? 2.5 : 1.2
-        offset.x: stateLayer.containsMouse ? 1.2 : 0.5
+        color: Qt.alpha(Colours.palette.m3shadow, root.isHovered ? 0.22 : 0.12)
+        blur: root.isHovered ? 8 : 4
+        offset.y: root.isHovered ? 2.5 : 1.2
+        offset.x: root.isHovered ? 1.2 : 0.5
 
         Behavior on color { CAnim {} }
         Behavior on blur { Anim { type: Anim.DefaultSpatial } }
@@ -133,7 +142,7 @@ Item {
         radius: Tokens.rounding.medium
         clip: true
 
-        readonly property color frontBaseColor: stateLayer.containsMouse
+        readonly property color frontBaseColor: root.isHovered
             ? Colours.tPalette.m3surfaceContainerHighest
             : Colours.tPalette.m3surfaceContainerHigh
 
@@ -141,7 +150,7 @@ Item {
                ? Qt.tint(frontBaseColor, Qt.alpha(root.accentColor, 0.22))
                : frontBaseColor
         border.width: 1
-        border.color: stateLayer.containsMouse
+        border.color: root.isHovered
                       ? Colours.palette.m3primary
                       : (root.hasCustomColor
                          ? Qt.alpha(root.accentColor, 0.45)
@@ -227,13 +236,13 @@ Item {
                           ? qsTr("View all (+%1)").arg(root.remainingCount)
                           : qsTr("View all")
                     font: Tokens.font.label.small
-                    color: stateLayer.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    color: root.isHovered ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 }
 
                 MaterialIcon {
                     text: "arrow_forward"
                     fontStyle: Tokens.font.icon.builders.small.scale(0.8).build()
-                    color: stateLayer.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    color: root.isHovered ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 }
             }
         }
@@ -320,13 +329,13 @@ Item {
                           ? qsTr("View all (+%1)").arg(root.remainingCount)
                           : qsTr("View all")
                     font: Tokens.font.label.small
-                    color: stateLayer.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    color: root.isHovered ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 }
 
                 MaterialIcon {
                     text: "arrow_forward"
                     fontStyle: Tokens.font.icon.builders.small.scale(0.8).build()
-                    color: stateLayer.containsMouse ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    color: root.isHovered ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
                 }
             }
         }
@@ -336,7 +345,7 @@ Item {
             id: stateLayer
             anchors.fill: parent
             radius: frontCard.radius
-            color: Colours.palette.m3primary
+            color: root.hasCustomColor ? root.accentColor : Colours.palette.m3primary
             z: 10
             onClicked: root.clicked()
         }

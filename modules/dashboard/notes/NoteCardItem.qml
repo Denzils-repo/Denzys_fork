@@ -27,14 +27,20 @@ StyledRect {
         }
     }
 
+    readonly property color baseColor: stateLayer.containsMouse
+        ? Colours.tPalette.m3surfaceContainerHighest
+        : Colours.tPalette.m3surfaceContainerHigh
+
     radius: Tokens.rounding.medium
     color: root.hasCustomColor
-           ? Qt.tint(Colours.tPalette.m3surfaceContainerHigh, Qt.alpha(root.accentColor, 0.22))
-           : Colours.tPalette.m3surfaceContainerHigh
+           ? Qt.tint(baseColor, Qt.alpha(root.accentColor, 0.22))
+           : baseColor
     border.width: 1
-    border.color: root.hasCustomColor
-                  ? Qt.alpha(root.accentColor, 0.45)
-                  : Qt.alpha(Colours.palette.m3outlineVariant, 0.45)
+    border.color: stateLayer.containsMouse
+                  ? (root.hasCustomColor ? root.accentColor : Colours.palette.m3primary)
+                  : (root.hasCustomColor
+                     ? Qt.alpha(root.accentColor, 0.45)
+                     : Qt.alpha(Colours.palette.m3outlineVariant, 0.45))
     implicitHeight: viewMode === "list" ? 70 : 118
     height: implicitHeight
     clip: true
@@ -45,14 +51,6 @@ StyledRect {
 
     Behavior on border.color {
         CAnim {}
-    }
-
-    StateLayer {
-        id: stateLayer
-        anchors.fill: parent
-        radius: root.radius
-        color: Colours.palette.m3onSurface
-        onClicked: root.clicked()
     }
 
     readonly property string cleanSnippet: {
@@ -106,5 +104,14 @@ StyledRect {
             maximumLineCount: root.viewMode === "list" ? 1 : 3
             opacity: 0.85
         }
+    }
+
+    StateLayer {
+        id: stateLayer
+        anchors.fill: parent
+        radius: root.radius
+        color: root.hasCustomColor ? root.accentColor : Colours.palette.m3primary
+        z: 10
+        onClicked: root.clicked()
     }
 }

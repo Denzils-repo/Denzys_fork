@@ -38,6 +38,18 @@ StyledRect {
     }
     readonly property bool showOtherStack: root.sectionFilter === "all" && root.otherNotes.length > 4
 
+    onPinnedNotesChanged: {
+        if (root.sectionFilter === "pinned" && root.pinnedNotes.length === 0) {
+            root.sectionFilter = "all";
+        }
+    }
+
+    onOtherNotesChanged: {
+        if (root.sectionFilter === "others" && root.otherNotes.length === 0) {
+            root.sectionFilter = "all";
+        }
+    }
+
     Item {
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
