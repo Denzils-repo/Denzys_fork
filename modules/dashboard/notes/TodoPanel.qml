@@ -403,12 +403,8 @@ StyledRect {
                             visible: root.calendarPickerOpen
                             currentDateStr: root.selectedNewDue
                             onDateSelected: (dateStr) => {
-                                root.selectedNewDue = dateStr;
+                                root.selectedNewDue = (root.selectedNewDue === dateStr ? "" : dateStr);
                                 root.newTodoRepeating = false;
-                                root.calendarPickerOpen = false;
-                                Qt.callLater(() => {
-                                    newTodoInput.forceActiveFocus();
-                                });
                             }
                             onCancelled: {
                                 root.calendarPickerOpen = false;

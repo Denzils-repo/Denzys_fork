@@ -397,9 +397,8 @@ Item {
                 visible: root.calendarOpen
                 currentDateStr: root.localDue
                 onDateSelected: (dateStr) => {
-                    root.localDue = dateStr;
+                    root.localDue = (root.localDue === dateStr ? "" : dateStr);
                     root.localRepeating = false;
-                    root.calendarOpen = false;
                     root.syncNow();
                 }
                 onCancelled: {

@@ -162,7 +162,7 @@ StyledRect {
                         anchors.centerIn: parent
                         implicitSize: Math.max(20, Math.min(parent.width, parent.height) - 2)
                         shape: MaterialShape.Clover4Leaf
-                        color: Colours.palette.m3primary
+                        color: Colours.palette.m3tertiary
                         z: 1
 
                         NumberAnimation on rotation {
@@ -181,7 +181,7 @@ StyledRect {
                         text: grid.locale.toString(dayItem.model.day)
                         color: {
                             if (dayItem.isSelected)
-                                return Colours.palette.m3onPrimary;
+                                return Colours.palette.m3onTertiary;
                             if (dayItem.dayOfWeek === 0 || dayItem.dayOfWeek === 6)
                                 return Colours.palette.m3tertiary;
                             return Colours.palette.m3onSurfaceVariant;
