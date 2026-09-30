@@ -89,7 +89,7 @@ StyledRect {
 
     Timer {
         id: autoSyncTimer
-        interval: 350
+        interval: 800
         repeat: false
         onTriggered: {
             if (root.activeNote) {
@@ -320,25 +320,29 @@ StyledRect {
                 CAnim {}
             }
 
-            // Rendered Markdown View (Default View Mode)
-            MarkdownNoteView {
-                id: markdownView
+            // Rendered Markdown View (Only active and loaded when in View Mode)
+            Loader {
+                id: markdownLoader
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.large
+                active: !root.isEditing
                 visible: !root.isEditing
-                rawText: root.localBody
-                accentColor: root.accentColor
-                hasCustomColor: root.hasCustomColor
-                listShapes: root.localListShapes
-                onShapesChanged: (shapes) => {
-                    root.localListShapes = Object.assign({}, shapes);
-                    if (root.activeNote) {
-                        NotesStore.updateNote(root.activeNote.id, root.localTitle, root.localBody, root.localPinned, root.localColor, root.localListShapes);
+
+                sourceComponent: MarkdownNoteView {
+                    rawText: root.localBody
+                    accentColor: root.accentColor
+                    hasCustomColor: root.hasCustomColor
+                    listShapes: root.localListShapes
+                    onShapesChanged: (shapes) => {
+                        root.localListShapes = Object.assign({}, shapes);
+                        if (root.activeNote) {
+                            NotesStore.updateNote(root.activeNote.id, root.localTitle, root.localBody, root.localPinned, root.localColor, root.localListShapes);
+                        }
                     }
-                }
-                onDoubleClicked: {
-                    root.isEditing = true;
-                    bodyArea.forceActiveFocus();
+                    onDoubleClicked: {
+                        root.isEditing = true;
+                        bodyArea.forceActiveFocus();
+                    }
                 }
             }
 
@@ -369,7 +373,6 @@ StyledRect {
                     }
 
                     onTextChanged: {
-                        root.localBody = text;
                         autoSyncTimer.restart();
                     }
                 }

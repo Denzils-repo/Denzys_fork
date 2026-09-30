@@ -268,22 +268,6 @@ Item {
                 color: root.localRepeating ? Colours.palette.m3tertiary : Colours.palette.m3onSurfaceVariant
             }
 
-            // Repeating Pill (if repeating)
-            StyledRect {
-                visible: root.localRepeating
-                radius: Tokens.rounding.full
-                implicitHeight: 20
-                implicitWidth: repeatPillText.implicitWidth + 12
-                color: Qt.alpha(Colours.palette.m3tertiary, 0.22)
-
-                StyledText {
-                    id: repeatPillText
-                    anchors.centerIn: parent
-                    text: qsTr("Daily Habit")
-                    font: Tokens.font.label.small
-                    color: Colours.palette.m3tertiary
-                }
-            }
 
             // Active Due Pill (if set and not repeating)
             StyledRect {
