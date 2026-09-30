@@ -53,16 +53,20 @@ StyledRect {
         return morphShapeList[idx % morphShapeList.length];
     }
 
-    readonly property var activeTodos: NotesStore.getTodos()
+    readonly property var activeTodos: NotesStore.getSortedTodos()
     readonly property var trashTodosList: NotesStore.getCompletedAndTrashTodos()
+    readonly property var repeatingTrashList: NotesStore.getRepeatingTrashTodos()
+    readonly property var generalTrashList: NotesStore.getGeneralTrashTodos()
     readonly property int remainingCount: NotesStore.getRemainingTodosCount()
     readonly property int trashCount: NotesStore.getTrashCount()
+    readonly property int generalTrashCount: NotesStore.getGeneralTrashCount()
 
     property bool showTrash: false
     property bool confirmEmptyTrash: false
     property bool isAdding: false
     property bool calendarPickerOpen: false
     property string selectedNewDue: ""
+    property bool newTodoRepeating: false
     readonly property bool isDatePicking: root.calendarPickerOpen || (detailView && detailView.calendarOpen)
 
     Timer {
@@ -119,9 +123,17 @@ StyledRect {
 
                     Item { Layout.fillWidth: true }
 
-                    // Empty Trash button (matches other buttons: ButtonBase.Tonal with 2-step confirm)
+                    // Sort toggle button (Latest ↔ Due Date), only shown in active todo mode
                     IconButton {
-                        visible: root.showTrash && root.trashCount > 0
+                        visible: !root.showTrash
+                        icon: NotesStore.todoSortMode === "date" ? "calendar_month" : "sort"
+                        type: NotesStore.todoSortMode === "date" ? ButtonBase.Filled : ButtonBase.Tonal
+                        onClicked: NotesStore.toggleTodoSort()
+                    }
+
+                    // Empty Trash button (clears general trash only, preserves repeating habits)
+                    IconButton {
+                        visible: root.showTrash && root.generalTrashCount > 0
                         icon: root.confirmEmptyTrash ? "check" : "delete_sweep"
                         type: root.confirmEmptyTrash ? ButtonBase.Filled : ButtonBase.Tonal
                         inactiveColour: root.confirmEmptyTrash ? Colours.palette.m3error : Colours.palette.m3secondaryContainer
@@ -150,6 +162,7 @@ StyledRect {
                             if (root.showTrash) {
                                 root.isAdding = false;
                                 root.calendarPickerOpen = false;
+                                root.newTodoRepeating = false;
                             }
                         }
                     }
@@ -164,6 +177,7 @@ StyledRect {
                             root.isAdding = !root.isAdding;
                             if (root.isAdding) {
                                 root.selectedNewDue = "";
+                                root.newTodoRepeating = false;
                                 root.calendarPickerOpen = false;
                                 Qt.callLater(() => {
                                     newTodoInput.text = "";
@@ -171,6 +185,7 @@ StyledRect {
                                 });
                             } else {
                                 root.calendarPickerOpen = false;
+                                root.newTodoRepeating = false;
                             }
                         }
                     }
@@ -215,6 +230,7 @@ StyledRect {
                             TextField {
                                 id: newTodoInput
                                 Layout.fillWidth: true
+                                maximumLength: 300
                                 enabled: !root.calendarPickerOpen
                                 placeholderText: qsTr("Add a new to-do…")
                                 placeholderTextColor: Colours.palette.m3onSurfaceVariant
@@ -237,19 +253,96 @@ StyledRect {
                                 }
                             }
 
-                            // Calendar Date Button / Pill
+                            // Repeating habit toggle button (morphs from circle to pill with text)
                             CustomMouseArea {
-                                id: datePickerTrigger
+                                id: repeatToggleBtn
                                 Layout.alignment: Qt.AlignVCenter
                                 implicitHeight: 26
-                                implicitWidth: dateBtnContent.implicitWidth + 14
+                                implicitWidth: root.newTodoRepeating ? (repeatContent.implicitWidth + 14) : 26
+                                opacity: datePickerTrigger.isDateActive ? 0.35 : 1.0
                                 cursorShape: Qt.PointingHandCursor
 
-                                readonly property var dueInfo: NotesStore.formatDuePill(root.selectedNewDue)
+                                Behavior on implicitWidth {
+                                    Anim { type: Anim.DefaultSpatial }
+                                }
+
+                                Behavior on opacity {
+                                    Anim { type: Anim.FastEffects }
+                                }
+
+                                onClicked: {
+                                    if (root.newTodoRepeating) {
+                                        root.newTodoRepeating = false;
+                                    } else {
+                                        root.newTodoRepeating = true;
+                                        root.selectedNewDue = "";
+                                        root.calendarPickerOpen = false;
+                                    }
+                                }
 
                                 StyledRect {
                                     anchors.fill: parent
                                     radius: Tokens.rounding.full
+                                    clip: true
+                                    color: root.newTodoRepeating
+                                           ? Colours.palette.m3primary
+                                           : "transparent"
+                                    border.width: 1
+                                    border.color: root.newTodoRepeating
+                                                  ? Colours.palette.m3primary
+                                                  : Qt.alpha(Colours.palette.m3outlineVariant, 0.5)
+
+                                    Behavior on color {
+                                        CAnim {}
+                                    }
+
+                                    RowLayout {
+                                        id: repeatContent
+                                        anchors.centerIn: parent
+                                        spacing: 4
+
+                                        MaterialIcon {
+                                            text: "repeat"
+                                            fontStyle: Tokens.font.icon.small
+                                            color: root.newTodoRepeating
+                                                   ? Colours.palette.m3onPrimary
+                                                   : Colours.palette.m3onSurfaceVariant
+                                        }
+
+                                        StyledText {
+                                            visible: root.newTodoRepeating
+                                            text: qsTr("Repeating")
+                                            font: Tokens.font.label.small
+                                            color: Colours.palette.m3onPrimary
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Calendar Date Button / Pill (morphs from circle to pill with text)
+                            CustomMouseArea {
+                                id: datePickerTrigger
+                                Layout.alignment: Qt.AlignVCenter
+                                implicitHeight: 26
+                                implicitWidth: datePickerTrigger.isDateActive ? (dateBtnContent.implicitWidth + 14) : 26
+                                opacity: root.newTodoRepeating ? 0.35 : 1.0
+                                cursorShape: Qt.PointingHandCursor
+
+                                readonly property bool isDateActive: root.calendarPickerOpen || root.selectedNewDue.length > 0
+                                readonly property var dueInfo: NotesStore.formatDuePill(root.selectedNewDue)
+
+                                Behavior on implicitWidth {
+                                    Anim { type: Anim.DefaultSpatial }
+                                }
+
+                                Behavior on opacity {
+                                    Anim { type: Anim.FastEffects }
+                                }
+
+                                StyledRect {
+                                    anchors.fill: parent
+                                    radius: Tokens.rounding.full
+                                    clip: true
                                     color: root.calendarPickerOpen
                                            ? Colours.palette.m3primary
                                            : (root.selectedNewDue.length > 0 ? Colours.palette.m3surfaceContainerHighest : "transparent")
@@ -276,6 +369,7 @@ StyledRect {
                                         }
 
                                         StyledText {
+                                            visible: datePickerTrigger.isDateActive
                                             text: datePickerTrigger.dueInfo ? datePickerTrigger.dueInfo.label : qsTr("Date")
                                             font: Tokens.font.label.small
                                             color: root.calendarPickerOpen
@@ -286,6 +380,9 @@ StyledRect {
                                 }
 
                                 onClicked: {
+                                    if (root.newTodoRepeating) {
+                                        root.newTodoRepeating = false;
+                                    }
                                     root.calendarPickerOpen = !root.calendarPickerOpen;
                                 }
                             }
@@ -307,6 +404,7 @@ StyledRect {
                             currentDateStr: root.selectedNewDue
                             onDateSelected: (dateStr) => {
                                 root.selectedNewDue = dateStr;
+                                root.newTodoRepeating = false;
                                 root.calendarPickerOpen = false;
                                 Qt.callLater(() => {
                                     newTodoInput.forceActiveFocus();
@@ -372,12 +470,11 @@ StyledRect {
                             }
                         }
 
-                        // Todo Rows
-                        Repeater {
-                            id: todoRepeater
-                            model: root.showTrash ? root.trashTodosList : root.activeTodos
+                        // Reusable Todo Row Component
+                        Component {
+                            id: todoRowDelegate
 
-                            delegate: Item {
+                            Item {
                                 id: todoRow
                                 required property var modelData
 
@@ -641,12 +738,8 @@ StyledRect {
                                         implicitHeight: Math.max(22, todoLabel.implicitHeight)
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
-                                            if (root.showTrash) {
-                                                NotesStore.restoreTodo(todoRow.todoId);
-                                            } else {
-                                                if (!todoRow.isScratching && !todoRow.isDeleting && !todoRow.actionCommitted) {
-                                                    NotesStore.openTodo(todoRow.modelData);
-                                                }
+                                            if (!todoRow.isScratching && !todoRow.isDeleting && !todoRow.actionCommitted) {
+                                                NotesStore.openTodo(todoRow.modelData);
                                             }
                                         }
 
@@ -701,6 +794,42 @@ StyledRect {
                                                     loops: Animation.Infinite
                                                 }
                                             }
+                                        }
+                                    }
+
+                                    // Repeating Pill (Active view)
+                                    StyledRect {
+                                        visible: !root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        radius: Tokens.rounding.full
+                                        implicitHeight: 18
+                                        implicitWidth: repeatingPillText.implicitWidth + 10
+                                        color: Qt.alpha(Colours.palette.m3tertiary, 0.22)
+
+                                        StyledText {
+                                            id: repeatingPillText
+                                            anchors.centerIn: parent
+                                            text: qsTr("Repeating")
+                                            font: Tokens.font.label.small
+                                            color: Colours.palette.m3tertiary
+                                        }
+                                    }
+
+                                    // Resetting Cooldown Pill in Trash
+                                    StyledRect {
+                                        visible: root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        radius: Tokens.rounding.full
+                                        implicitHeight: 18
+                                        implicitWidth: resettingText.implicitWidth + 10
+                                        color: Qt.alpha(Colours.palette.m3secondary, 0.22)
+
+                                        StyledText {
+                                            id: resettingText
+                                            anchors.centerIn: parent
+                                            text: NotesStore.getResettingTimeText()
+                                            font: Tokens.font.label.small
+                                            color: Colours.palette.m3secondary
                                         }
                                     }
 
@@ -774,6 +903,89 @@ StyledRect {
                                 }
                             }
                         }
+
+                        // Active Todos List (Visible when not in Trash)
+                        Repeater {
+                            id: activeTodoRepeater
+                            visible: !root.showTrash
+                            model: root.showTrash ? [] : root.activeTodos
+                            delegate: todoRowDelegate
+                        }
+
+                        // Trash View: Repeating Habits Section (Resting)
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            visible: root.showTrash && root.repeatingTrashList.length > 0
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 4
+                                Layout.bottomMargin: 2
+                                spacing: 6
+
+                                MaterialIcon {
+                                    text: "repeat"
+                                    fontStyle: Tokens.font.icon.small
+                                    color: Colours.palette.m3tertiary
+                                }
+
+                                StyledText {
+                                    text: qsTr(`Repeating Habits (${root.repeatingTrashList.length})`)
+                                    font: Tokens.font.label.medium
+                                    color: Colours.palette.m3tertiary
+                                }
+                            }
+
+                            Repeater {
+                                id: repeatingTrashRepeater
+                                model: root.showTrash ? root.repeatingTrashList : []
+                                delegate: todoRowDelegate
+                            }
+                        }
+
+                        // Subtle divider between Repeating and General trash
+                        StyledRect {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 6
+                            Layout.bottomMargin: 6
+                            implicitHeight: 1
+                            color: Colours.palette.m3outlineVariant
+                            opacity: 0.3
+                            visible: root.showTrash && root.repeatingTrashList.length > 0 && root.generalTrashList.length > 0
+                        }
+
+                        // Trash View: General Trash Section
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+                            visible: root.showTrash && root.generalTrashList.length > 0
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 4
+                                Layout.bottomMargin: 2
+                                spacing: 6
+
+                                MaterialIcon {
+                                    text: "delete_outline"
+                                    fontStyle: Tokens.font.icon.small
+                                    color: Colours.palette.m3onSurfaceVariant
+                                }
+
+                                StyledText {
+                                    text: qsTr(`General (${root.generalTrashList.length})`)
+                                    font: Tokens.font.label.medium
+                                    color: Colours.palette.m3onSurfaceVariant
+                                }
+                            }
+
+                            Repeater {
+                                id: generalTrashRepeater
+                                model: root.showTrash ? root.generalTrashList : []
+                                delegate: todoRowDelegate
+                            }
+                        }
                     }
                 }
             }
@@ -792,14 +1004,18 @@ StyledRect {
     }
 
     function flushPendingActions() {
-        if (todoRepeater) {
-            for (let i = 0; i < todoRepeater.count; ++i) {
-                const item = todoRepeater.itemAt(i);
-                if (item) {
-                    if (item.isScratching && !item.actionCommitted) {
-                        item.commitCompletion();
-                    } else if (item.isDeleting && !item.actionCommitted) {
-                        item.commitDeletion();
+        const repeaters = [activeTodoRepeater, repeatingTrashRepeater, generalTrashRepeater];
+        for (let r = 0; r < repeaters.length; ++r) {
+            const rep = repeaters[r];
+            if (rep) {
+                for (let i = 0; i < rep.count; ++i) {
+                    const item = rep.itemAt(i);
+                    if (item) {
+                        if (item.isScratching && !item.actionCommitted) {
+                            item.commitCompletion();
+                        } else if (item.isDeleting && !item.actionCommitted) {
+                            item.commitDeletion();
+                        }
                     }
                 }
             }
@@ -809,9 +1025,10 @@ StyledRect {
     function commitNewTodo() {
         const text = newTodoInput.text.trim();
         if (text.length > 0) {
-            NotesStore.addTodo(text, root.selectedNewDue);
+            NotesStore.addTodo(text, root.selectedNewDue, root.newTodoRepeating);
             newTodoInput.text = "";
             root.selectedNewDue = "";
+            root.newTodoRepeating = false;
             root.calendarPickerOpen = false;
             root.isAdding = false;
         }

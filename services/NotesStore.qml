@@ -12,6 +12,7 @@ Singleton {
     property var todos: []
     property var trashTodos: []
     property string viewMode: "grid" // "grid" | "list"
+    property string todoSortMode: "latest" // "latest" | "date"
     property bool loaded: false
     property int version: 0
 
@@ -51,26 +52,48 @@ Singleton {
         onTriggered: root.flushSave()
     }
 
+    property int minuteTick: 0
+
+    Timer {
+        id: repeatingRolloverTimer
+        interval: 60000
+        running: true
+        repeat: true
+        onTriggered: {
+            root.checkRepeatingRollover();
+            root.minuteTick++;
+        }
+    }
+
     function loadData(content) {
         let raw = content !== undefined ? content : (stateFile ? stateFile.text() : "");
         let loadedNotes = null;
         let loadedTodos = null;
         let loadedTrash = null;
         let loadedMode = "grid";
+        let loadedSortMode = "latest";
 
         let hadMissingShape = false;
+        const todayStr = root.getTodayString();
         function ensureTaskShape(item) {
             if (!item) return item;
-            if (item.shapeIndex !== undefined && typeof item.shapeIndex === "number") return item;
-            const str = String(item.id || item.title || "todo");
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) - hash) + str.charCodeAt(i);
-                hash |= 0;
+            let copy = item;
+            if (item.shapeIndex === undefined || typeof item.shapeIndex !== "number") {
+                const str = String(item.id || item.title || "todo");
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                    hash |= 0;
+                }
+                copy = Object.assign({}, copy);
+                copy.shapeIndex = Math.abs(hash);
+                hadMissingShape = true;
             }
-            const copy = Object.assign({}, item);
-            copy.shapeIndex = Math.abs(hash);
-            hadMissingShape = true;
+            if (copy.repeating && copy.done && copy.lastCompletedDate && copy.lastCompletedDate !== todayStr) {
+                copy = Object.assign({}, copy);
+                copy.done = false;
+                hadMissingShape = true;
+            }
             return copy;
         }
 
@@ -81,7 +104,10 @@ Singleton {
                     if (Array.isArray(data.notes)) loadedNotes = data.notes;
                     if (Array.isArray(data.todos)) loadedTodos = data.todos.map(ensureTaskShape);
                     if (Array.isArray(data.trashTodos)) loadedTrash = data.trashTodos.map(ensureTaskShape);
-                    if (data.settings && data.settings.viewMode) loadedMode = data.settings.viewMode;
+                    if (data.settings) {
+                        if (data.settings.viewMode) loadedMode = data.settings.viewMode;
+                        if (data.settings.todoSortMode) loadedSortMode = data.settings.todoSortMode;
+                    }
                 }
             } catch (e) {
                 console.warn("[NotesStore] Failed to parse notes.json, attempting fallback:", e);
@@ -98,7 +124,10 @@ Singleton {
                         if (!loadedNotes && Array.isArray(fbData.notes)) loadedNotes = fbData.notes;
                         if (!loadedTodos && Array.isArray(fbData.todos)) loadedTodos = fbData.todos;
                         if (!loadedTrash && Array.isArray(fbData.trashTodos)) loadedTrash = fbData.trashTodos;
-                        if (fbData.settings && fbData.settings.viewMode) loadedMode = fbData.settings.viewMode;
+                        if (fbData.settings) {
+                            if (fbData.settings.viewMode) loadedMode = fbData.settings.viewMode;
+                            if (fbData.settings.todoSortMode) loadedSortMode = fbData.settings.todoSortMode;
+                        }
                         console.info("[NotesStore] Auto-recovered notes/todos from notes.default.json");
                     }
                 }
@@ -111,8 +140,10 @@ Singleton {
         root.todos = loadedTodos || [];
         root.trashTodos = loadedTrash || [];
         root.viewMode = loadedMode || "grid";
+        root.todoSortMode = loadedSortMode || "latest";
         root.loaded = true;
         root.version++;
+        root.checkRepeatingRollover();
         if (hadMissingShape) root.requestSave();
     }
 
@@ -138,7 +169,8 @@ Singleton {
             "todos": root.todos,
             "trashTodos": root.trashTodos,
             "settings": {
-                "viewMode": root.viewMode
+                "viewMode": root.viewMode,
+                "todoSortMode": root.todoSortMode
             }
         };
 
@@ -324,28 +356,128 @@ Singleton {
         return root.getTodos();
     }
 
+    // Returns active todos sorted according to the current todoSortMode:
+    //   "latest"  → newest createdAt first (default insertion order)
+    //   "date"    → overdue → today → tomorrow → in N days (asc) → no date
+    function getSortedTodos() {
+        root.version;
+        const base = root.getTodos();
+        if (root.todoSortMode === "date") {
+            const now = new Date();
+            const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+            function dueBucket(t) {
+                const due = t && t.due ? t.due.trim() : "";
+                if (!due || due === "none" || due === "") return 999999; // no date → last
+                const clean = due.toLowerCase();
+                if (clean === "overdue") return -1;
+                if (clean === "today") return 0;
+                if (clean === "tomorrow") return 1;
+                const parts = due.split("-");
+                let target;
+                if (parts.length === 3) {
+                    target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                } else {
+                    target = new Date(due);
+                }
+                if (!target || isNaN(target.getTime())) return 999999;
+                const targetMs = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime();
+                const diffDays = Math.round((targetMs - todayMs) / 86400000);
+                if (diffDays < 0) return -1;   // overdue
+                return diffDays;               // 0 = today, 1 = tomorrow, N = in N days
+            }
+
+            return base.slice().sort((a, b) => {
+                const da = dueBucket(a);
+                const db = dueBucket(b);
+                if (da !== db) return da - db;
+                // secondary: newest createdAt first within same bucket
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
+        }
+        // "latest": sort by createdAt descending (newest first)
+        return base.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    }
+
+    function toggleTodoSort() {
+        root.todoSortMode = root.todoSortMode === "latest" ? "date" : "latest";
+        root.version++;
+        root.requestSave();
+    }
+
     function getRemainingTodosCount() {
         root.version;
         if (!root.todos) return 0;
         return root.todos.filter(t => t && !t.done).length;
     }
 
-    function getCompletedAndTrashTodos() {
+    function getRepeatingTrashTodos() {
         root.version;
-        const completed = (root.todos || []).filter(t => t && t.done);
+        return (root.todos || []).filter(t => t && t.done && t.repeating);
+    }
+
+    function getGeneralTrashTodos() {
+        root.version;
+        const generalCompleted = (root.todos || []).filter(t => t && t.done && !t.repeating);
         const trashed = root.trashTodos || [];
-        return completed.concat(trashed);
+        return generalCompleted.concat(trashed);
+    }
+
+    function getCompletedAndTrashTodos() {
+        return root.getRepeatingTrashTodos().concat(root.getGeneralTrashTodos());
     }
 
     function getTrashCount() {
         root.version;
-        const completedCount = (root.todos || []).filter(t => t && t.done).length;
-        const trashedCount = (root.trashTodos || []).length;
-        return completedCount + trashedCount;
+        return root.getCompletedAndTrashTodos().length;
     }
 
-    function addTodo(title, due) {
-        const cleanTitle = (title || "").trim();
+    function getGeneralTrashCount() {
+        root.version;
+        return root.getGeneralTrashTodos().length;
+    }
+
+    function getResettingTimeText() {
+        root.minuteTick;
+        root.version;
+        const now = new Date();
+        const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        const diffMs = midnight.getTime() - now.getTime();
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        if (diffHours > 0) {
+            return qsTr(`Resetting in ${diffHours}h`);
+        }
+        return qsTr(`Resetting in ${Math.max(1, diffMins)}m`);
+    }
+
+    function getRestingTimeText() {
+        return root.getResettingTimeText();
+    }
+
+    function checkRepeatingRollover() {
+        const todayStr = root.getTodayString();
+        let changed = false;
+        const updated = (root.todos || []).map(t => {
+            if (t && t.repeating && t.done) {
+                if (!t.lastCompletedDate || t.lastCompletedDate !== todayStr) {
+                    const copy = Object.assign({}, t);
+                    copy.done = false;
+                    changed = true;
+                    return copy;
+                }
+            }
+            return t;
+        });
+        if (changed) {
+            root.todos = updated;
+            root.flushSave();
+            root.version++;
+        }
+    }
+
+    function addTodo(title, due, repeating) {
+        const cleanTitle = (title || "").trim().slice(0, 300);
         if (cleanTitle.length === 0) return null;
 
         const now = Date.now();
@@ -354,6 +486,9 @@ Singleton {
             "title": cleanTitle,
             "done": false,
             "due": due || "",
+            "repeating": !!repeating,
+            "streak": 0,
+            "lastCompletedDate": "",
             "type": "task",
             "createdAt": now,
             "shapeIndex": Math.floor(Math.random() * 1000)
@@ -369,11 +504,21 @@ Singleton {
     function toggleTodo(id) {
         if (!id) return false;
         let found = false;
+        const todayStr = root.getTodayString();
         const updated = (root.todos || []).map(t => {
             if (t && t.id === id) {
                 found = true;
                 const copy = Object.assign({}, t);
-                copy.done = !copy.done;
+                const nextDone = !copy.done;
+                copy.done = nextDone;
+                if (copy.repeating) {
+                    if (nextDone) {
+                        if (copy.lastCompletedDate !== todayStr) {
+                            copy.streak = (copy.streak || 0) + 1;
+                            copy.lastCompletedDate = todayStr;
+                        }
+                    }
+                }
                 return copy;
             }
             return t;
@@ -387,15 +532,16 @@ Singleton {
         return false;
     }
 
-    function updateTodo(id, title, due) {
+    function updateTodo(id, title, due, repeating) {
         if (!id) return false;
         let found = false;
         const updated = (root.todos || []).map(t => {
             if (t && t.id === id) {
                 found = true;
                 const copy = Object.assign({}, t);
-                if (title !== undefined) copy.title = title.trim();
+                if (title !== undefined) copy.title = title.slice(0, 300);
                 if (due !== undefined) copy.due = due;
+                if (repeating !== undefined) copy.repeating = !!repeating;
                 return copy;
             }
             return t;
@@ -405,8 +551,9 @@ Singleton {
             root.todos = updated;
             if (root.activeTodo && root.activeTodo.id === id) {
                 root.activeTodo = Object.assign({}, root.activeTodo, {
-                    title: title !== undefined ? title.trim() : root.activeTodo.title,
-                    due: due !== undefined ? due : root.activeTodo.due
+                    title: title !== undefined ? title.slice(0, 300) : root.activeTodo.title,
+                    due: due !== undefined ? due : root.activeTodo.due,
+                    repeating: repeating !== undefined ? !!repeating : root.activeTodo.repeating
                 });
             }
             root.flushSave();
@@ -556,7 +703,8 @@ Singleton {
 
     function emptyAllTrash() {
         root.trashTodos = [];
-        root.todos = (root.todos || []).filter(t => t && !t.done);
+        // Keep active todos AND completed repeating todos. Only purge completed non-repeating todos.
+        root.todos = (root.todos || []).filter(t => !t.done || t.repeating);
         root.flushSave();
         return true;
     }

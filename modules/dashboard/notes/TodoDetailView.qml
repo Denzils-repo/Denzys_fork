@@ -50,10 +50,12 @@ Item {
     readonly property int taskShape: getTaskShape(root.activeTodo)
 
     readonly property var activeTodo: NotesStore.activeTodo
+    readonly property int maxTitleLength: 300
 
     property string localTitle: ""
     property string localDue: ""
     property bool localDone: false
+    property bool localRepeating: false
     property bool calendarOpen: false
     property bool confirmDelete: false
 
@@ -64,14 +66,46 @@ Item {
         onTriggered: root.confirmDelete = false
     }
 
+    property string currentTodoId: ""
+
     onActiveTodoChanged: {
         confirmDeleteTimer.stop();
         confirmDelete = false;
         if (activeTodo) {
+            const newId = activeTodo.id || "";
+            if (newId !== currentTodoId) {
+                currentTodoId = newId;
+                localTitle = activeTodo.title || "";
+                localDue = activeTodo.due || "";
+                localDone = !!activeTodo.done;
+                localRepeating = !!activeTodo.repeating;
+                if (todoTextArea) {
+                    todoTextArea.text = localTitle;
+                    todoTextArea.cursorPosition = todoTextArea.length;
+                }
+            } else {
+                localDue = activeTodo.due || "";
+                localDone = !!activeTodo.done;
+                localRepeating = !!activeTodo.repeating;
+            }
+        } else {
+            currentTodoId = "";
+        }
+    }
+
+    Component.onCompleted: {
+        confirmDeleteTimer.stop();
+        confirmDelete = false;
+        if (activeTodo) {
+            currentTodoId = activeTodo.id || "";
             localTitle = activeTodo.title || "";
             localDue = activeTodo.due || "";
             localDone = !!activeTodo.done;
-            todoTextArea.text = localTitle;
+            localRepeating = !!activeTodo.repeating;
+            if (todoTextArea) {
+                todoTextArea.text = localTitle;
+                todoTextArea.cursorPosition = todoTextArea.length;
+            }
         }
     }
 
@@ -81,7 +115,7 @@ Item {
         repeat: false
         onTriggered: {
             if (root.activeTodo) {
-                NotesStore.updateTodo(root.activeTodo.id, root.localTitle, root.localDue);
+                NotesStore.updateTodo(root.activeTodo.id, root.localTitle, root.localDue, root.localRepeating);
             }
         }
     }
@@ -89,7 +123,7 @@ Item {
     function syncNow() {
         autoSyncTimer.stop();
         if (root.activeTodo) {
-            NotesStore.updateTodo(root.activeTodo.id, root.localTitle, root.localDue);
+            NotesStore.updateTodo(root.activeTodo.id, root.localTitle, root.localDue, root.localRepeating);
         }
     }
 
@@ -217,26 +251,43 @@ Item {
             opacity: 0.5
         }
 
-        // Due date row
+        // Due date / Repeat row
         RowLayout {
             Layout.fillWidth: true
             spacing: Tokens.spacing.small
 
             MaterialIcon {
-                text: "event"
+                text: root.localRepeating ? "repeat" : "event"
                 fontStyle: Tokens.font.icon.small
-                color: Colours.palette.m3onSurfaceVariant
+                color: root.localRepeating ? Colours.palette.m3tertiary : Colours.palette.m3onSurfaceVariant
             }
 
             StyledText {
-                text: qsTr("Due:")
+                text: root.localRepeating ? qsTr("Repeat:") : qsTr("Due:")
                 font: Tokens.font.label.medium
-                color: Colours.palette.m3onSurfaceVariant
+                color: root.localRepeating ? Colours.palette.m3tertiary : Colours.palette.m3onSurfaceVariant
             }
 
-            // Active Due Pill (if set)
+            // Repeating Pill (if repeating)
             StyledRect {
-                visible: root.currentDuePill !== null
+                visible: root.localRepeating
+                radius: Tokens.rounding.full
+                implicitHeight: 20
+                implicitWidth: repeatPillText.implicitWidth + 12
+                color: Qt.alpha(Colours.palette.m3tertiary, 0.22)
+
+                StyledText {
+                    id: repeatPillText
+                    anchors.centerIn: parent
+                    text: qsTr("Daily Habit")
+                    font: Tokens.font.label.small
+                    color: Colours.palette.m3tertiary
+                }
+            }
+
+            // Active Due Pill (if set and not repeating)
+            StyledRect {
+                visible: !root.localRepeating && root.currentDuePill !== null
                 radius: Tokens.rounding.full
                 implicitHeight: 20
                 implicitWidth: currentDueText.implicitWidth + 12
@@ -272,10 +323,75 @@ Item {
                 type: root.calendarOpen ? ButtonBase.Filled : ButtonBase.Text
                 Layout.preferredWidth: 28
                 Layout.preferredHeight: 28
-                onClicked: root.calendarOpen = !root.calendarOpen
+                opacity: root.localRepeating ? 0.35 : 1.0
+                onClicked: {
+                    if (root.localRepeating) {
+                        root.localRepeating = false;
+                    }
+                    root.calendarOpen = !root.calendarOpen;
+                }
+
+                Behavior on opacity {
+                    Anim { type: Anim.FastEffects }
+                }
+            }
+
+            // Repeat toggle button
+            IconButton {
+                icon: "repeat"
+                type: root.localRepeating ? ButtonBase.Filled : ButtonBase.Tonal
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+                opacity: (root.calendarOpen || root.localDue.length > 0) ? 0.35 : 1.0
+                onClicked: {
+                    root.localRepeating = !root.localRepeating;
+                    if (root.localRepeating) {
+                        root.localDue = "";
+                        root.calendarOpen = false;
+                    }
+                    autoSyncTimer.restart();
+                }
+
+                Behavior on opacity {
+                    Anim { type: Anim.FastEffects }
+                }
             }
 
             Item { Layout.fillWidth: true }
+
+            // Character count badge (current/300)
+            StyledRect {
+                radius: Tokens.rounding.full
+                implicitHeight: 20
+                implicitWidth: charCountText.implicitWidth + 14
+                color: {
+                    const len = todoTextArea ? todoTextArea.length : (root.localTitle ? root.localTitle.length : 0);
+                    if (len >= root.maxTitleLength) return Qt.alpha(Colours.palette.m3error, 0.22);
+                    if (len >= root.maxTitleLength - 30) return Qt.alpha(Colours.palette.m3tertiary, 0.22);
+                    return Colours.palette.m3surfaceContainerHigh;
+                }
+
+                Behavior on color {
+                    CAnim {}
+                }
+
+                StyledText {
+                    id: charCountText
+                    anchors.centerIn: parent
+                    text: `${todoTextArea ? todoTextArea.length : (root.localTitle ? root.localTitle.length : 0)}/${root.maxTitleLength}`
+                    font: Tokens.font.label.small
+                    color: {
+                        const len = todoTextArea ? todoTextArea.length : (root.localTitle ? root.localTitle.length : 0);
+                        if (len >= root.maxTitleLength) return Colours.palette.m3error;
+                        if (len >= root.maxTitleLength - 30) return Colours.palette.m3tertiary;
+                        return Colours.palette.m3onSurfaceVariant;
+                    }
+
+                    Behavior on color {
+                        CAnim {}
+                    }
+                }
+            }
         }
 
         // Thin divider
@@ -298,6 +414,7 @@ Item {
                 currentDateStr: root.localDue
                 onDateSelected: (dateStr) => {
                     root.localDue = dateStr;
+                    root.localRepeating = false;
                     root.calendarOpen = false;
                     root.syncNow();
                 }
@@ -328,8 +445,15 @@ Item {
                     selectByMouse: true
 
                     onTextChanged: {
-                        root.localTitle = text;
-                        autoSyncTimer.restart();
+                        if (length > root.maxTitleLength) {
+                            const cursor = cursorPosition;
+                            text = text.slice(0, root.maxTitleLength);
+                            cursorPosition = Math.min(cursor, root.maxTitleLength);
+                        }
+                        if (root.localTitle !== text) {
+                            root.localTitle = text;
+                            autoSyncTimer.restart();
+                        }
                     }
                 }
             }
