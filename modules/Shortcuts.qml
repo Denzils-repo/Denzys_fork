@@ -5,6 +5,8 @@ import Caelestia
 import qs.components.misc
 import qs.services
 import qs.modules.nexus
+import qs.modules.dashboard
+import Caelestia.Config
 
 Scope {
     id: root
@@ -105,6 +107,21 @@ Scope {
                 return;
             const screenState = ShellState.forActive();
             screenState.utilities = !screenState.utilities;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "newNote"
+        description: "Create a new note in notes tab"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            screenState.dashboard = true;
+            screenState.dashboardTab = (Config.dashboard.showDashboard ? 1 : 0) + (Config.dashboard.showMedia ? 1 : 0);
+            NotesStore.createAndOpenNewNote();
         }
     }
 
