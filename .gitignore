@@ -4,3 +4,5 @@
 build/
 .cache/
 logs
+.skills-cache/
+.skills-loaded.json

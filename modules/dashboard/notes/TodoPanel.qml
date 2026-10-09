@@ -8,7 +8,9 @@ import Caelestia.Components
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.components.effects
 import qs.services
+import Quickshell
 
 StyledRect {
     id: root
@@ -817,10 +819,29 @@ StyledRect {
                                             anchors.centerIn: parent
                                             spacing: 2
 
-                                            MaterialIcon {
-                                                text: "local_fire_department"
-                                                fontStyle: Tokens.font.icon.small
-                                                color: Colours.palette.m3onTertiaryContainer
+                                            Item {
+                                                Layout.alignment: Qt.AlignVCenter
+                                                implicitWidth: 14
+                                                implicitHeight: 14
+
+                                                AnimatedImage {
+                                                    id: streakFireAnim
+                                                    anchors.fill: parent
+                                                    source: Quickshell.shellPath("assets/fire.webp")
+                                                    fillMode: Image.PreserveAspectFit
+                                                    asynchronous: true
+                                                    playing: todoRow.isRowHovered
+                                                    paused: !todoRow.isRowHovered
+                                                    onPlayingChanged: {
+                                                        if (!playing)
+                                                            currentFrame = 0;
+                                                    }
+
+                                                    layer.enabled: true
+                                                    layer.effect: Colouriser {
+                                                        colorizationColor: Colours.palette.m3onTertiaryContainer
+                                                    }
+                                                }
                                             }
 
                                             StyledText {

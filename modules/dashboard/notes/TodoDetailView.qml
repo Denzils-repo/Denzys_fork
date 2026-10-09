@@ -7,7 +7,9 @@ import M3Shapes
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.components.effects
 import qs.services
+import Quickshell
 
 Item {
     id: root
@@ -378,15 +380,38 @@ Item {
                 implicitWidth: streakDetailRow.implicitWidth + 10
                 color: Colours.palette.m3tertiaryContainer
 
+                HoverHandler {
+                    id: streakDetailHover
+                }
+
                 RowLayout {
                     id: streakDetailRow
                     anchors.centerIn: parent
                     spacing: 3
 
-                    MaterialIcon {
-                        text: "local_fire_department"
-                        fontStyle: Tokens.font.icon.small
-                        color: Colours.palette.m3onTertiaryContainer
+                    Item {
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: 14
+                        implicitHeight: 14
+
+                        AnimatedImage {
+                            id: streakDetailFireAnim
+                            anchors.fill: parent
+                            source: Quickshell.shellPath("assets/fire.webp")
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            playing: streakDetailHover.hovered
+                            paused: !streakDetailHover.hovered
+                            onPlayingChanged: {
+                                if (!playing)
+                                    currentFrame = 0;
+                            }
+
+                            layer.enabled: true
+                            layer.effect: Colouriser {
+                                colorizationColor: Colours.palette.m3onTertiaryContainer
+                            }
+                        }
                     }
 
                     StyledText {
