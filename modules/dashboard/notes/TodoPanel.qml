@@ -752,23 +752,64 @@ StyledRect {
                                         }
 
                                         Item {
+                                            id: textContainer
                                             anchors.fill: parent
                                             clip: true
 
+                                            readonly property bool isOverflowing: textContainer.width > 0 && todoLabel.implicitWidth > textContainer.width
+                                            readonly property bool isMarqueeActive: todoRow.isRowHovered && isOverflowing && !todoRow.isScratching && !todoRow.isDeleting
+
                                             StyledText {
                                                 id: todoLabel
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
                                                 anchors.verticalCenter: parent.verticalCenter
+                                                x: 0
+                                                width: textContainer.isMarqueeActive ? implicitWidth : parent.width
                                                 text: todoRow.modelData ? (todoRow.modelData.title || "") : ""
                                                 font: Tokens.font.body.medium
                                                 color: (todoRow.isDone || root.showTrash || todoRow.isScratching) ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
                                                 opacity: (todoRow.isDone || root.showTrash) ? 0.7 : 1.0
-                                                elide: Text.ElideRight
+                                                elide: textContainer.isMarqueeActive ? Text.ElideNone : Text.ElideRight
                                                 maximumLineCount: 1
 
                                                 Behavior on opacity {
                                                     Anim {}
+                                                }
+
+                                                onTextChanged: {
+                                                    marqueeAnim.stop();
+                                                    x = 0;
+                                                }
+                                            }
+
+                                            SequentialAnimation {
+                                                id: marqueeAnim
+                                                running: textContainer.isMarqueeActive
+                                                loops: Animation.Infinite
+
+                                                PauseAnimation { duration: 500 }
+                                                NumberAnimation {
+                                                    target: todoLabel
+                                                    property: "x"
+                                                    from: 0
+                                                    to: -(todoLabel.implicitWidth - textContainer.width + 12)
+                                                    duration: Math.max(1200, (todoLabel.implicitWidth - textContainer.width + 12) * 25)
+                                                    easing.type: Easing.Linear
+                                                }
+                                                PauseAnimation { duration: 800 }
+                                                ScriptAction {
+                                                    script: {
+                                                        todoLabel.x = 0;
+                                                    }
+                                                }
+                                            }
+
+                                            Connections {
+                                                target: todoRow
+                                                function onIsRowHoveredChanged() {
+                                                    if (!todoRow.isRowHovered) {
+                                                        marqueeAnim.stop();
+                                                        todoLabel.x = 0;
+                                                    }
                                                 }
                                             }
 
