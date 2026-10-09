@@ -64,10 +64,37 @@ StyledRect {
         }
     }
 
+    function focusBody() {
+        if (bodyArea && root.isEditing && root.visible) {
+            if (!bodyArea.activeFocus) {
+                bodyArea.forceActiveFocus();
+            }
+        }
+    }
+
+    Timer {
+        id: focusBodyTimer
+        interval: 150
+        repeat: false
+        onTriggered: root.focusBody()
+    }
+
+    Connections {
+        target: NotesStore
+        function onRequestFocusBody(): void {
+            Qt.callLater(root.focusBody);
+            focusBodyTimer.restart();
+        }
+    }
+
     onVisibleChanged: {
         if (visible) {
             root.resetScroll();
             Qt.callLater(root.resetScroll);
+            if (!localTitle && !localBody) {
+                Qt.callLater(root.focusBody);
+                focusBodyTimer.restart();
+            }
         }
     }
 
@@ -92,6 +119,10 @@ StyledRect {
             if (bodyArea) bodyArea.text = localBody;
             root.resetScroll();
             Qt.callLater(root.resetScroll);
+            if (!localTitle && !localBody) {
+                Qt.callLater(root.focusBody);
+                focusBodyTimer.restart();
+            }
         }
     }
 
@@ -110,6 +141,10 @@ StyledRect {
             if (bodyArea) bodyArea.text = localBody;
             root.resetScroll();
             Qt.callLater(root.resetScroll);
+            if (!localTitle && !localBody) {
+                Qt.callLater(root.focusBody);
+                focusBodyTimer.restart();
+            }
         }
     }
 

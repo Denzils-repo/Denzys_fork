@@ -20,6 +20,7 @@ Singleton {
     // Takeover / editing state for Notes detail view
     property var activeNote: null
     property bool isEditingNote: false
+    signal requestFocusBody()
 
     // Takeover / editing state for Todo detail view
     property var activeTodo: null
@@ -305,6 +306,9 @@ Singleton {
     function createAndOpenNewNote() {
         const newNote = addNote("", "", false, "none");
         openNote(newNote);
+        Qt.callLater(() => {
+            root.requestFocusBody();
+        });
         return newNote;
     }
 
