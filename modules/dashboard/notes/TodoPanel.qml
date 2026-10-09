@@ -759,25 +759,65 @@ StyledRect {
                                             readonly property bool isOverflowing: textContainer.width > 0 && todoLabel.implicitWidth > textContainer.width
                                             readonly property bool isMarqueeActive: todoRow.isRowHovered && isOverflowing && !todoRow.isScratching && !todoRow.isDeleting
 
-                                            StyledText {
-                                                id: todoLabel
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                x: 0
-                                                width: textContainer.isMarqueeActive ? implicitWidth : parent.width
-                                                text: todoRow.modelData ? (todoRow.modelData.title || "") : ""
-                                                font: Tokens.font.body.medium
-                                                color: (todoRow.isDone || root.showTrash || todoRow.isScratching) ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
-                                                opacity: (todoRow.isDone || root.showTrash) ? 0.7 : 1.0
-                                                elide: textContainer.isMarqueeActive ? Text.ElideNone : Text.ElideRight
-                                                maximumLineCount: 1
+                                            property real marqueeFade: 1.0
 
-                                                Behavior on opacity {
-                                                    Anim {}
+                                            Item {
+                                                id: textFadeWrapper
+                                                anchors.fill: parent
+                                                opacity: textContainer.marqueeFade
+
+                                                StyledText {
+                                                    id: todoLabel
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    x: 0
+                                                    width: textContainer.isMarqueeActive ? implicitWidth : parent.width
+                                                    text: todoRow.modelData ? (todoRow.modelData.title || "") : ""
+                                                    font: Tokens.font.body.medium
+                                                    color: (todoRow.isDone || root.showTrash || todoRow.isScratching) ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
+                                                    opacity: (todoRow.isDone || root.showTrash) ? 0.7 : 1.0
+                                                    elide: textContainer.isMarqueeActive ? Text.ElideNone : Text.ElideRight
+                                                    maximumLineCount: 1
+
+                                                    Behavior on opacity {
+                                                        Anim {}
+                                                    }
+
+                                                    onTextChanged: {
+                                                        marqueeAnim.stop();
+                                                        textContainer.marqueeFade = 1.0;
+                                                        x = 0;
+                                                    }
                                                 }
 
-                                                onTextChanged: {
-                                                    marqueeAnim.stop();
-                                                    x = 0;
+                                                // Subtle Wavy Strike-through & Living Worm Scratch Animation
+                                                WavyLine {
+                                                    id: scratchWavyLine
+
+                                                    readonly property bool isActionActive: todoRow.isScratching || todoRow.isDeleting
+                                                    readonly property bool isResting: (todoRow.isDone || root.showTrash) && !isActionActive
+
+                                                    visible: isActionActive || isResting
+                                                    anchors.left: todoLabel.left
+                                                    anchors.verticalCenter: todoLabel.verticalCenter
+                                                    width: Math.max(1, Math.min(todoLabel.implicitWidth, todoLabel.width))
+                                                    height: 12
+
+                                                    lineWidth: 2
+                                                    amplitudeMultiplier: isActionActive ? 0.75 : 0.55
+                                                    frequency: Math.max(2, Math.round(width / 24))
+                                                    fullLength: width
+                                                    value: isActionActive ? todoRow.scratchProgress : 1.0
+                                                    color: todoRow.isDeleting ? Colours.palette.m3error : (isActionActive ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant)
+                                                    opacity: isActionActive ? 1.0 : 0.7
+
+                                                    Anim on waveProgress {
+                                                        running: scratchWavyLine.isActionActive
+                                                        from: 0
+                                                        to: 1
+                                                        duration: 500
+                                                        easing.type: Easing.Linear
+                                                        loops: Animation.Infinite
+                                                    }
                                                 }
                                             }
 
@@ -796,10 +836,27 @@ StyledRect {
                                                     easing.type: Easing.Linear
                                                 }
                                                 PauseAnimation { duration: 800 }
+                                                NumberAnimation {
+                                                    target: textContainer
+                                                    property: "marqueeFade"
+                                                    from: 1.0
+                                                    to: 0.0
+                                                    duration: 250
+                                                    easing.type: Easing.OutQuad
+                                                }
                                                 ScriptAction {
                                                     script: {
                                                         todoLabel.x = 0;
                                                     }
+                                                }
+                                                PauseAnimation { duration: 60 }
+                                                NumberAnimation {
+                                                    target: textContainer
+                                                    property: "marqueeFade"
+                                                    from: 0.0
+                                                    to: 1.0
+                                                    duration: 250
+                                                    easing.type: Easing.InQuad
                                                 }
                                             }
 
@@ -808,39 +865,9 @@ StyledRect {
                                                 function onIsRowHoveredChanged() {
                                                     if (!todoRow.isRowHovered) {
                                                         marqueeAnim.stop();
+                                                        textContainer.marqueeFade = 1.0;
                                                         todoLabel.x = 0;
                                                     }
-                                                }
-                                            }
-
-                                            // Subtle Wavy Strike-through & Living Worm Scratch Animation
-                                            WavyLine {
-                                                id: scratchWavyLine
-
-                                                readonly property bool isActionActive: todoRow.isScratching || todoRow.isDeleting
-                                                readonly property bool isResting: (todoRow.isDone || root.showTrash) && !isActionActive
-
-                                                visible: isActionActive || isResting
-                                                anchors.left: todoLabel.left
-                                                anchors.verticalCenter: todoLabel.verticalCenter
-                                                width: Math.max(1, Math.min(todoLabel.implicitWidth, todoLabel.width))
-                                                height: 12
-
-                                                lineWidth: 2
-                                                amplitudeMultiplier: isActionActive ? 0.75 : 0.55
-                                                frequency: Math.max(2, Math.round(width / 24))
-                                                fullLength: width
-                                                value: isActionActive ? todoRow.scratchProgress : 1.0
-                                                color: todoRow.isDeleting ? Colours.palette.m3error : (isActionActive ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant)
-                                                opacity: isActionActive ? 1.0 : 0.7
-
-                                                Anim on waveProgress {
-                                                    running: scratchWavyLine.isActionActive
-                                                    from: 0
-                                                    to: 1
-                                                    duration: 500
-                                                    easing.type: Easing.Linear
-                                                    loops: Animation.Infinite
                                                 }
                                             }
                                         }
