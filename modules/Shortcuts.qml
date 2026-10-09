@@ -122,6 +122,10 @@ Scope {
             screenState.dashboard = true;
             screenState.dashboardTab = (Config.dashboard.showDashboard ? 1 : 0) + (Config.dashboard.showMedia ? 1 : 0);
             NotesStore.createAndOpenNewNote();
+            const scr = screenState?.modelData;
+            const targetX = Math.round((scr?.x ?? 0) + (scr?.width ?? 1920) / 2);
+            const targetY = Math.round((scr?.y ?? 0) + 250);
+            Quickshell.execDetached(["hyprctl", "dispatch", `hl.dsp.cursor.move({ x = ${targetX}, y = ${targetY} })`]);
         }
     }
 
