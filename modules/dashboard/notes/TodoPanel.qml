@@ -841,22 +841,22 @@ StyledRect {
                                                     property: "marqueeFade"
                                                     from: 1.0
                                                     to: 0.0
-                                                    duration: 250
-                                                    easing.type: Easing.OutQuad
+                                                    duration: 380
+                                                    easing.type: Easing.InOutCubic
                                                 }
                                                 ScriptAction {
                                                     script: {
                                                         todoLabel.x = 0;
                                                     }
                                                 }
-                                                PauseAnimation { duration: 60 }
+                                                PauseAnimation { duration: 100 }
                                                 NumberAnimation {
                                                     target: textContainer
                                                     property: "marqueeFade"
                                                     from: 0.0
                                                     to: 1.0
-                                                    duration: 250
-                                                    easing.type: Easing.InQuad
+                                                    duration: 380
+                                                    easing.type: Easing.InOutCubic
                                                 }
                                             }
 
