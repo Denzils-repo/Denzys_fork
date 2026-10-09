@@ -403,16 +403,32 @@ Item {
                             mipmap: true
                             sourceSize: Qt.size(32, 32)
                             asynchronous: true
-                            playing: streakDetailHover.hovered
-                            paused: !streakDetailHover.hovered
-                            onPlayingChanged: {
-                                if (!playing)
-                                    currentFrame = 0;
+
+                            property bool shouldComplete: false
+                            playing: streakDetailHover.hovered || shouldComplete
+                            paused: !playing
+
+                            onCurrentFrameChanged: {
+                                if (currentFrame === frameCount - 1 || (currentFrame === 0 && !streakDetailHover.hovered && shouldComplete)) {
+                                    if (!streakDetailHover.hovered) {
+                                        shouldComplete = false;
+                                        currentFrame = 0;
+                                    }
+                                }
+                            }
+
+                            Connections {
+                                target: streakDetailHover
+                                function onHoveredChanged() {
+                                    if (streakDetailHover.hovered) {
+                                        streakDetailFireAnim.shouldComplete = true;
+                                    }
+                                }
                             }
 
                             layer.enabled: true
                             layer.effect: Colouriser {
-                                colorizationColor: "#FF6D00"
+                                colorizationColor: Colours.palette.m3onTertiaryContainer
                             }
                         }
                     }

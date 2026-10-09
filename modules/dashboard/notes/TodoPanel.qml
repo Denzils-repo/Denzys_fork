@@ -835,28 +835,27 @@ StyledRect {
                                                     duration: Math.max(1200, (todoLabel.implicitWidth - textContainer.width + 12) * 25)
                                                     easing.type: Easing.Linear
                                                 }
-                                                PauseAnimation { duration: 800 }
+                                                PauseAnimation { duration: 600 }
                                                 NumberAnimation {
                                                     target: textContainer
                                                     property: "marqueeFade"
                                                     from: 1.0
                                                     to: 0.0
-                                                    duration: 380
-                                                    easing.type: Easing.InOutCubic
+                                                    duration: 160
+                                                    easing.type: Easing.InOutQuad
                                                 }
                                                 ScriptAction {
                                                     script: {
                                                         todoLabel.x = 0;
                                                     }
                                                 }
-                                                PauseAnimation { duration: 100 }
                                                 NumberAnimation {
                                                     target: textContainer
                                                     property: "marqueeFade"
                                                     from: 0.0
                                                     to: 1.0
-                                                    duration: 380
-                                                    easing.type: Easing.InOutCubic
+                                                    duration: 160
+                                                    easing.type: Easing.InOutQuad
                                                 }
                                             }
 
@@ -901,16 +900,32 @@ StyledRect {
                                                     mipmap: true
                                                     sourceSize: Qt.size(32, 32)
                                                     asynchronous: true
-                                                    playing: todoRow.isRowHovered
-                                                    paused: !todoRow.isRowHovered
-                                                    onPlayingChanged: {
-                                                        if (!playing)
-                                                            currentFrame = 0;
+
+                                                    property bool shouldComplete: false
+                                                    playing: todoRow.isRowHovered || shouldComplete
+                                                    paused: !playing
+
+                                                    onCurrentFrameChanged: {
+                                                        if (currentFrame === frameCount - 1 || (currentFrame === 0 && !todoRow.isRowHovered && shouldComplete)) {
+                                                            if (!todoRow.isRowHovered) {
+                                                                shouldComplete = false;
+                                                                currentFrame = 0;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Connections {
+                                                        target: todoRow
+                                                        function onIsRowHoveredChanged() {
+                                                            if (todoRow.isRowHovered) {
+                                                                streakFireAnim.shouldComplete = true;
+                                                            }
+                                                        }
                                                     }
 
                                                     layer.enabled: true
                                                     layer.effect: Colouriser {
-                                                        colorizationColor: "#FF6D00"
+                                                        colorizationColor: Colours.palette.m3onTertiaryContainer
                                                     }
                                                 }
                                             }
