@@ -52,6 +52,7 @@ Item {
     readonly property int taskShape: getTaskShape(root.activeTodo)
 
     readonly property var activeTodo: NotesStore.activeTodo
+    readonly property bool isTrashed: NotesStore.isTodoTrashed(root.activeTodo ? root.activeTodo.id : "")
     readonly property int maxTitleLength: 300
 
     property string localTitle: ""
@@ -189,8 +190,13 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (root.activeTodo) {
-                        root.localDone = !root.localDone;
-                        NotesStore.toggleTodo(root.activeTodo.id);
+                        if (root.isTrashed) {
+                            NotesStore.restoreTodo(root.activeTodo.id);
+                            NotesStore.closeTodo(false);
+                        } else {
+                            root.localDone = !root.localDone;
+                            NotesStore.toggleTodo(root.activeTodo.id);
+                        }
                     }
                 }
 
@@ -199,11 +205,13 @@ Item {
                     anchors.centerIn: parent
                     implicitSize: 18
 
-                    shape: root.localDone ? root.taskShape : MaterialShape.Square
+                    readonly property bool isChecked: root.localDone || root.isTrashed
 
-                    color: root.localDone ? Colours.palette.m3primary : "transparent"
-                    strokeColor: root.localDone ? Colours.palette.m3primary : (detailCheckMouse.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline)
-                    strokeWidth: root.localDone ? 0 : 1.5
+                    shape: isChecked ? root.taskShape : MaterialShape.Square
+
+                    color: isChecked ? Colours.palette.m3primary : "transparent"
+                    strokeColor: isChecked ? Colours.palette.m3primary : (detailCheckMouse.containsMouse ? Colours.palette.m3primary : Colours.palette.m3outline)
+                    strokeWidth: isChecked ? 0 : 1.5
 
                     scale: detailCheckMouse.pressed ? 0.88 : (detailCheckMouse.containsMouse ? 1.08 : 1.0)
 
@@ -228,8 +236,8 @@ Item {
                         fontStyle: Tokens.font.icon.small
                         color: Colours.palette.m3onPrimary
                         visible: opacity > 0
-                        opacity: root.localDone ? 1 : 0
-                        scale: root.localDone ? 1.0 : 0.4
+                        opacity: detailCheckShape.isChecked ? 1 : 0
+                        scale: detailCheckShape.isChecked ? 1.0 : 0.4
 
                         Behavior on opacity {
                             Anim { type: Anim.FastEffects }
@@ -243,15 +251,34 @@ Item {
             }
 
             StyledText {
-                text: root.localDone ? qsTr("Completed") : qsTr("Task Details")
+                text: root.isTrashed
+                      ? (root.localRepeating ? qsTr("Resting Habit") : qsTr("Trash Item"))
+                      : (root.localDone ? qsTr("Completed") : qsTr("Task Details"))
                 font: Tokens.font.title.small
-                color: root.localDone ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
+                color: (root.isTrashed || root.localDone) ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
             }
 
             Item { Layout.fillWidth: true }
 
+            // Restore button (visible when viewing an item from trash)
             IconButton {
-                icon: root.confirmDelete ? "check" : "delete"
+                visible: root.isTrashed
+                icon: "restore"
+                type: ButtonBase.Tonal
+                activeColour: Colours.palette.m3secondary
+                inactiveColour: Colours.palette.m3secondaryContainer
+                activeOnColour: Colours.palette.m3onSecondary
+                inactiveOnColour: Colours.palette.m3onSecondaryContainer
+                onClicked: {
+                    if (root.activeTodo) {
+                        NotesStore.restoreTodo(root.activeTodo.id);
+                        NotesStore.closeTodo(false);
+                    }
+                }
+            }
+
+            IconButton {
+                icon: root.confirmDelete ? "check" : (root.isTrashed ? "delete_forever" : "delete")
                 type: root.confirmDelete ? ButtonBase.Filled : ButtonBase.Tonal
                 activeColour: root.confirmDelete ? Colours.palette.m3error : Colours.palette.m3secondary
                 inactiveColour: root.confirmDelete ? Colours.palette.m3error : Colours.palette.m3secondaryContainer
@@ -266,7 +293,11 @@ Item {
                         root.confirmDelete = false;
                         root.calendarOpen = false;
                         if (root.activeTodo) {
-                            NotesStore.deleteTodo(root.activeTodo.id);
+                            if (root.isTrashed) {
+                                NotesStore.permanentlyDeleteTodo(root.activeTodo.id);
+                            } else {
+                                NotesStore.deleteTodo(root.activeTodo.id);
+                            }
                         }
                     }
                 }

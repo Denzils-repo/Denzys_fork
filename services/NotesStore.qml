@@ -427,14 +427,23 @@ Singleton {
 
     function getRepeatingTrashTodos() {
         root.version;
-        return (root.todos || []).filter(t => t && t.done && t.repeating);
+        const fromTodos = (root.todos || []).filter(t => t && t.done && t.repeating);
+        const fromTrash = (root.trashTodos || []).filter(t => t && t.repeating);
+        return fromTodos.concat(fromTrash);
     }
 
     function getGeneralTrashTodos() {
         root.version;
         const generalCompleted = (root.todos || []).filter(t => t && t.done && !t.repeating);
-        const trashed = root.trashTodos || [];
-        return generalCompleted.concat(trashed);
+        const generalTrashed = (root.trashTodos || []).filter(t => t && !t.repeating);
+        return generalCompleted.concat(generalTrashed);
+    }
+
+    function isTodoTrashed(id) {
+        if (!id) return false;
+        if ((root.trashTodos || []).some(t => t && t.id === id)) return true;
+        const inTodos = (root.todos || []).find(t => t && t.id === id);
+        return !!(inTodos && inTodos.done);
     }
 
     function getCompletedAndTrashTodos() {
@@ -529,6 +538,10 @@ Singleton {
 
     function toggleTodo(id) {
         if (!id) return false;
+        // If in trashTodos, toggling restores it
+        if ((root.trashTodos || []).some(t => t && t.id === id)) {
+            return root.restoreTodo(id);
+        }
         let found = false;
         const todayStr = root.getTodayString();
         const updated = (root.todos || []).map(t => {
@@ -560,10 +573,10 @@ Singleton {
 
     function updateTodo(id, title, due, repeating) {
         if (!id) return false;
-        let found = false;
+        let foundInTodos = false;
         const updated = (root.todos || []).map(t => {
             if (t && t.id === id) {
-                found = true;
+                foundInTodos = true;
                 const copy = Object.assign({}, t);
                 if (title !== undefined) copy.title = title.slice(0, 300);
                 if (due !== undefined) copy.due = due;
@@ -573,7 +586,7 @@ Singleton {
             return t;
         });
 
-        if (found) {
+        if (foundInTodos) {
             root.todos = updated;
             if (root.activeTodo && root.activeTodo.id === id) {
                 root.activeTodo = Object.assign({}, root.activeTodo, {
@@ -585,31 +598,66 @@ Singleton {
             root.flushSave();
             return true;
         }
+
+        // Also check root.trashTodos
+        let foundInTrash = false;
+        const updatedTrash = (root.trashTodos || []).map(t => {
+            if (t && t.id === id) {
+                foundInTrash = true;
+                const copy = Object.assign({}, t);
+                if (title !== undefined) copy.title = title.slice(0, 300);
+                if (due !== undefined) copy.due = due;
+                if (repeating !== undefined) copy.repeating = !!repeating;
+                return copy;
+            }
+            return t;
+        });
+
+        if (foundInTrash) {
+            root.trashTodos = updatedTrash;
+            if (root.activeTodo && root.activeTodo.id === id) {
+                root.activeTodo = Object.assign({}, root.activeTodo, {
+                    title: title !== undefined ? title.slice(0, 300) : root.activeTodo.title,
+                    due: due !== undefined ? due : root.activeTodo.due,
+                    repeating: repeating !== undefined ? !!repeating : root.activeTodo.repeating
+                });
+            }
+            root.flushSave();
+            return true;
+        }
+
         return false;
     }
 
     function deleteTodo(id) {
         if (!id) return false;
         const target = (root.todos || []).find(t => t && t.id === id);
-        if (!target) return false;
+        if (target) {
+            const trashedItem = Object.assign({}, target, {
+                done: true,
+                deletedAt: Date.now()
+            });
 
-        const trashedItem = Object.assign({}, target, {
-            done: true,
-            deletedAt: Date.now()
-        });
+            const updatedTrash = Array.from(root.trashTodos || []);
+            updatedTrash.unshift(trashedItem);
+            root.trashTodos = updatedTrash;
 
-        const updatedTrash = Array.from(root.trashTodos || []);
-        updatedTrash.unshift(trashedItem);
-        root.trashTodos = updatedTrash;
-
-        root.lastDeletedTodo = target;
-        root.todos = (root.todos || []).filter(t => t && t.id !== id);
-        if (root.activeTodo && root.activeTodo.id === id) {
-            root.activeTodo = null;
-            root.isEditingTodo = false;
+            root.lastDeletedTodo = target;
+            root.todos = (root.todos || []).filter(t => t && t.id !== id);
+            if (root.activeTodo && root.activeTodo.id === id) {
+                root.activeTodo = null;
+                root.isEditingTodo = false;
+            }
+            root.flushSave();
+            return true;
         }
-        root.flushSave();
-        return true;
+
+        // If already in trashTodos and deleteTodo is invoked, permanently remove
+        if ((root.trashTodos || []).some(t => t && t.id === id)) {
+            return root.permanentlyDeleteTodo(id);
+        }
+
+        return false;
     }
 
     function openTodo(todo) {
@@ -698,6 +746,9 @@ Singleton {
             const updated = Array.from(root.todos || []);
             updated.unshift(restored);
             root.todos = updated;
+            if (root.activeTodo && root.activeTodo.id === id) {
+                root.activeTodo = restored;
+            }
             root.flushSave();
             return true;
         }
@@ -709,6 +760,9 @@ Singleton {
                 if (t && t.id === id) {
                     const copy = Object.assign({}, t);
                     copy.done = false;
+                    if (root.activeTodo && root.activeTodo.id === id) {
+                        root.activeTodo = copy;
+                    }
                     return copy;
                 }
                 return t;
@@ -723,12 +777,17 @@ Singleton {
         if (!id) return false;
         root.trashTodos = (root.trashTodos || []).filter(t => t && t.id !== id);
         root.todos = (root.todos || []).filter(t => t && t.id !== id);
+        if (root.activeTodo && root.activeTodo.id === id) {
+            root.activeTodo = null;
+            root.isEditingTodo = false;
+        }
         root.flushSave();
         return true;
     }
 
     function emptyAllTrash() {
-        root.trashTodos = [];
+        // Keep repeating habits in trashTodos, purge only non-repeating items
+        root.trashTodos = (root.trashTodos || []).filter(t => t && t.repeating);
         // Keep active todos AND completed repeating todos. Only purge completed non-repeating todos.
         root.todos = (root.todos || []).filter(t => !t.done || t.repeating);
         root.flushSave();
