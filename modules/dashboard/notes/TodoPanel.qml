@@ -974,7 +974,7 @@ StyledRect {
 
                                     // Smart Due Pill (Today, Tomorrow, in X days, Overdue)
                                     StyledRect {
-                                        visible: !root.showTrash && todoRow.duePillInfo !== null
+                                        visible: !root.showTrash && todoRow.duePillInfo !== null && !(todoRow.modelData && todoRow.modelData.repeating)
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
                                         implicitHeight: 18
