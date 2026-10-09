@@ -40,13 +40,6 @@ Singleton {
     readonly property FileView fallbackFile: FileView {
         path: `${Quickshell.env("HOME")}/.config/caelestia/notes.default.json`
         printErrors: false
-        onLoaded: {
-            // First run (no notes file yet): load the starter notes from this template.
-            // A notes file that exists but is empty means the user cleared their board: leave it alone.
-            if (root.notes.length === 0 && root.todos.length === 0 && stateFile.text().trim().length === 0) {
-                root.loadData();
-            }
-        }
     }
 
     readonly property FileView backupFile: FileView {
@@ -82,6 +75,7 @@ Singleton {
         let loadedMode = "grid";
         let loadedSortMode = "latest";
 
+        let parsedSuccessfully = false;
         let hadMissingShape = false;
         const todayStr = root.getTodayString();
         function ensureTaskShape(item) {
@@ -110,6 +104,7 @@ Singleton {
             try {
                 const data = JSON.parse(raw);
                 if (data && typeof data === "object") {
+                    parsedSuccessfully = true;
                     if (Array.isArray(data.notes)) loadedNotes = data.notes;
                     if (Array.isArray(data.todos)) loadedTodos = data.todos.map(ensureTaskShape);
                     if (Array.isArray(data.trashTodos)) loadedTrash = data.trashTodos.map(ensureTaskShape);
@@ -123,8 +118,8 @@ Singleton {
             }
         }
 
-        // Auto-heal / fallback from notes.default.json
-        if ((!loadedNotes || !loadedTodos) && fallbackFile) {
+        // Auto-heal / fallback from notes.default.json ONLY if state file was missing or unparseable
+        if (!parsedSuccessfully && (!loadedNotes || !loadedTodos) && fallbackFile) {
             try {
                 const fbText = fallbackFile.text();
                 if (fbText && fbText.trim().length > 0) {
@@ -157,6 +152,7 @@ Singleton {
     }
 
     function requestSave() {
+        if (!root.loaded) return;
         if (saveDebounceTimer.running) {
             saveDebounceTimer.restart();
         } else {
@@ -165,11 +161,11 @@ Singleton {
     }
 
     function flushSave() {
-        if (!stateFile) return;
+        if (!stateFile || !root.loaded) return;
         saveDebounceTimer.stop();
 
         const currentText = stateFile.text();
-        if (backupFile && currentText && currentText.trim().length > 0) {
+        if (backupFile && currentText && currentText.trim().length > 20 && root.notes && root.notes.length > 0) {
             backupFile.setText(currentText);
         }
 
