@@ -401,7 +401,6 @@ Item {
                             fillMode: Image.PreserveAspectFit
                             smooth: true
                             mipmap: true
-                            sourceSize: Qt.size(32, 32)
                             asynchronous: true
 
                             property bool shouldComplete: false
