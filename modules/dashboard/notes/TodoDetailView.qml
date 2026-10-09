@@ -377,7 +377,7 @@ Item {
                 Layout.alignment: Qt.AlignVCenter
                 radius: Tokens.rounding.full
                 implicitHeight: 20
-                implicitWidth: streakDetailRow.implicitWidth + 10
+                implicitWidth: streakDetailRow.implicitWidth + 12
                 color: Colours.palette.m3tertiaryContainer
 
                 HoverHandler {
@@ -391,14 +391,17 @@ Item {
 
                     Item {
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: 14
-                        implicitHeight: 14
+                        implicitWidth: 16
+                        implicitHeight: 16
 
                         AnimatedImage {
                             id: streakDetailFireAnim
                             anchors.fill: parent
                             source: Quickshell.shellPath("assets/fire.webp")
                             fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            mipmap: true
+                            sourceSize: Qt.size(32, 32)
                             asynchronous: true
                             playing: streakDetailHover.hovered
                             paused: !streakDetailHover.hovered
@@ -409,7 +412,7 @@ Item {
 
                             layer.enabled: true
                             layer.effect: Colouriser {
-                                colorizationColor: Colours.palette.m3onTertiaryContainer
+                                colorizationColor: "#FF6D00"
                             }
                         }
                     }
