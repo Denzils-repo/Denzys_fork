@@ -74,16 +74,36 @@ StyledRect {
 
     Timer {
         id: focusBodyTimer
-        interval: 150
-        repeat: false
-        onTriggered: root.focusBody()
+        interval: 60
+        repeat: true
+        property int attempts: 0
+        onTriggered: {
+            attempts++;
+            if (bodyArea && root.isEditing && root.visible) {
+                if (!bodyArea.activeFocus) {
+                    bodyArea.forceActiveFocus();
+                }
+                if (bodyArea.activeFocus || attempts >= 10) {
+                    attempts = 0;
+                    stop();
+                }
+            } else if (attempts >= 10) {
+                attempts = 0;
+                stop();
+            }
+        }
+    }
+
+    function triggerFocusBody() {
+        focusBodyTimer.attempts = 0;
+        focusBodyTimer.restart();
+        Qt.callLater(root.focusBody);
     }
 
     Connections {
         target: NotesStore
         function onRequestFocusBody(): void {
-            Qt.callLater(root.focusBody);
-            focusBodyTimer.restart();
+            root.triggerFocusBody();
         }
     }
 
@@ -92,8 +112,7 @@ StyledRect {
             root.resetScroll();
             Qt.callLater(root.resetScroll);
             if (!localTitle && !localBody) {
-                Qt.callLater(root.focusBody);
-                focusBodyTimer.restart();
+                root.triggerFocusBody();
             }
         }
     }
@@ -120,8 +139,7 @@ StyledRect {
             root.resetScroll();
             Qt.callLater(root.resetScroll);
             if (!localTitle && !localBody) {
-                Qt.callLater(root.focusBody);
-                focusBodyTimer.restart();
+                root.triggerFocusBody();
             }
         }
     }
@@ -142,8 +160,7 @@ StyledRect {
             root.resetScroll();
             Qt.callLater(root.resetScroll);
             if (!localTitle && !localBody) {
-                Qt.callLater(root.focusBody);
-                focusBodyTimer.restart();
+                root.triggerFocusBody();
             }
         }
     }
