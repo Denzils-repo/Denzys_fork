@@ -13,6 +13,7 @@ Singleton {
     property var trashTodos: []
     property string viewMode: "grid" // "grid" | "list"
     property string todoSortMode: "latest" // "latest" | "date"
+    property bool breakStreaks: true
     property bool loaded: false
     property int version: 0
 
@@ -416,6 +417,12 @@ Singleton {
         return root.todos.filter(t => t && !t.done).length;
     }
 
+    function getStreak(id) {
+        root.version;
+        const t = (root.todos || []).find(t => t && t.id === id);
+        return t ? (t.streak || 0) : 0;
+    }
+
     function getRepeatingTrashTodos() {
         root.version;
         return (root.todos || []).filter(t => t && t.done && t.repeating);
@@ -474,6 +481,18 @@ Singleton {
             }
             return t;
         });
+        if (root.breakStreaks) {
+            const yesterdayStr = root.getOffsetDateString(-1);
+            for (let i = 0; i < updated.length; i++) {
+                const t = updated[i];
+                if (t && t.repeating && (t.streak || 0) > 0 && t.lastCompletedDate && t.lastCompletedDate < yesterdayStr) {
+                    const copy = Object.assign({}, t);
+                    copy.streak = 0;
+                    updated[i] = copy;
+                    changed = true;
+                }
+            }
+        }
         if (changed) {
             root.todos = updated;
             root.flushSave();
@@ -516,13 +535,13 @@ Singleton {
                 const copy = Object.assign({}, t);
                 const nextDone = !copy.done;
                 copy.done = nextDone;
-                if (copy.repeating) {
-                    if (nextDone) {
-                        if (copy.lastCompletedDate !== todayStr) {
-                            copy.streak = (copy.streak || 0) + 1;
-                            copy.lastCompletedDate = todayStr;
-                        }
+                if (copy.repeating && nextDone && copy.lastCompletedDate !== todayStr) {
+                    if (root.breakStreaks && copy.lastCompletedDate !== root.getOffsetDateString(-1)) {
+                        copy.streak = 1;
+                    } else {
+                        copy.streak = (copy.streak || 0) + 1;
                     }
+                    copy.lastCompletedDate = todayStr;
                 }
                 return copy;
             }
