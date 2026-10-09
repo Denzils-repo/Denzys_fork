@@ -469,9 +469,9 @@ Singleton {
         const diffHours = Math.floor(diffMs / 3600000);
         const diffMins = Math.floor((diffMs % 3600000) / 60000);
         if (diffHours > 0) {
-            return qsTr(`Resetting in ${diffHours}h`);
+            return qsTr(`Resets in ${diffHours}h`);
         }
-        return qsTr(`Resetting in ${Math.max(1, diffMins)}m`);
+        return qsTr(`Resets in ${Math.max(1, diffMins)}m`);
     }
 
     function getRestingTimeText() {

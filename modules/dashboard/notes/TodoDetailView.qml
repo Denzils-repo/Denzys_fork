@@ -179,6 +179,8 @@ Item {
             IconButton {
                 icon: "arrow_back"
                 type: ButtonBase.Tonal
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
                 onClicked: root.handleBack()
             }
 
@@ -251,20 +253,23 @@ Item {
             }
 
             StyledText {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                elide: Text.ElideRight
                 text: root.isTrashed
-                      ? (root.localRepeating ? qsTr("Resting Habit") : qsTr("Trash Item"))
+                      ? (root.localRepeating ? NotesStore.getResettingTimeText() : qsTr("Trash Item"))
                       : (root.localDone ? qsTr("Completed") : qsTr("Task Details"))
                 font: Tokens.font.title.small
                 color: (root.isTrashed || root.localDone) ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurface
             }
-
-            Item { Layout.fillWidth: true }
 
             // Restore button (visible when viewing an item from trash)
             IconButton {
                 visible: root.isTrashed
                 icon: "restore"
                 type: ButtonBase.Tonal
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
                 activeColour: Colours.palette.m3secondary
                 inactiveColour: Colours.palette.m3secondaryContainer
                 activeOnColour: Colours.palette.m3onSecondary
@@ -278,8 +283,10 @@ Item {
             }
 
             IconButton {
-                icon: root.confirmDelete ? "check" : (root.isTrashed ? "delete_forever" : "delete")
+                icon: root.confirmDelete ? "check" : "delete"
                 type: root.confirmDelete ? ButtonBase.Filled : ButtonBase.Tonal
+                Layout.preferredWidth: 32
+                Layout.preferredHeight: 32
                 activeColour: root.confirmDelete ? Colours.palette.m3error : Colours.palette.m3secondary
                 inactiveColour: root.confirmDelete ? Colours.palette.m3error : Colours.palette.m3secondaryContainer
                 activeOnColour: root.confirmDelete ? Colours.palette.m3onError : Colours.palette.m3onSecondary
@@ -293,11 +300,7 @@ Item {
                         root.confirmDelete = false;
                         root.calendarOpen = false;
                         if (root.activeTodo) {
-                            if (root.isTrashed) {
-                                NotesStore.permanentlyDeleteTodo(root.activeTodo.id);
-                            } else {
-                                NotesStore.deleteTodo(root.activeTodo.id);
-                            }
+                            NotesStore.permanentlyDeleteTodo(root.activeTodo.id);
                         }
                     }
                 }
