@@ -216,9 +216,6 @@ CustomMouseArea {
         } else if (showDashboard) {
             // If hovering over dashboard area while in shortcut mode, transition to hover control
             dashboardShortcutActive = false;
-        } else if (Config.dashboard.showOnHover) {
-            dashboardShortcutActive = false;
-            screenState.dashboard = false;
         }
 
         // Show/hide dashboard on drag (for touchscreen devices)
