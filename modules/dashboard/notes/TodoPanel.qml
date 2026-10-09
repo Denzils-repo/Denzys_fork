@@ -808,25 +808,24 @@ StyledRect {
                                         visible: !root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating) && (todoRow.modelData.streak || 0) > 0
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
-                                        implicitHeight: 28
-                                        implicitWidth: streakDetailRow.implicitWidth + 8
+                                        implicitHeight: 18
+                                        implicitWidth: streakDetailRow.implicitWidth + 10
                                         color: Colours.palette.m3tertiaryContainer
 
                                         RowLayout {
                                             id: streakDetailRow
                                             anchors.centerIn: parent
-                                            spacing: 6
+                                            spacing: 2
 
                                             MaterialIcon {
                                                 text: "local_fire_department"
-                                                fontStyle: Tokens.font.icon.medium
+                                                fontStyle: Tokens.font.icon.small
                                                 color: Colours.palette.m3onTertiaryContainer
-                                                transform: Translate { x: -3 }
                                             }
 
                                             StyledText {
                                                 text: todoRow.modelData ? String(todoRow.modelData.streak || 0) : "0"
-                                                font: Tokens.font.label.large
+                                                font: Tokens.font.label.small
                                                 color: Colours.palette.m3onTertiaryContainer
                                             }
                                         }
@@ -835,17 +834,17 @@ StyledRect {
                                     // Repeat Icon (Active view) - hidden when streak > 0
                                     StyledRect {
                                         visible: !root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating) && (todoRow.modelData.streak || 0) === 0
+                                        Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
-                                        implicitHeight: 28
-                                        implicitWidth: 28
+                                        implicitHeight: 18
+                                        implicitWidth: 18
                                         color: Colours.palette.m3tertiaryContainer
 
                                         MaterialIcon {
                                             text: "repeat"
-                                            fontStyle: Tokens.font.icon.medium
+                                            fontStyle: Tokens.font.icon.small
                                             color: Colours.palette.m3onTertiaryContainer
                                             anchors.centerIn: parent
-                                            transform: Translate { y: 1 }
                                         }
                                     }
 
