@@ -305,7 +305,7 @@ Item {
 
     Timer {
         id: popInTimer
-        interval: 280
+        interval: 260
         repeat: false
         onTriggered: {
             root.contentReady = true;
@@ -431,21 +431,11 @@ Item {
                 visible: root.blocks.length === 0
 
                 opacity: root.contentReady ? 1.0 : 0.0
-                scale: root.contentReady ? 1.0 : 0.985
-                transformOrigin: Item.Center
 
                 Behavior on opacity {
                     enabled: root.contentReady && root.shouldAnimate
                     NumberAnimation {
-                        duration: 260
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Behavior on scale {
-                    enabled: root.contentReady && root.shouldAnimate
-                    NumberAnimation {
-                        duration: 280
+                        duration: 220
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -513,15 +503,13 @@ Item {
                     implicitHeight: blockCol.implicitHeight
 
                     opacity: (root.contentReady && blockItem.revealed) ? 1.0 : 0.0
-                    scale: (root.contentReady && blockItem.revealed) ? 1.0 : 0.99
-                    transformOrigin: Item.TopLeft
 
                     transform: Translate {
-                        y: (root.contentReady && blockItem.revealed) ? 0 : 6
+                        y: (root.contentReady && blockItem.revealed) ? 0 : 4
                         Behavior on y {
                             enabled: root.contentReady && root.shouldAnimate
                             NumberAnimation {
-                                duration: 280
+                                duration: 220
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -530,15 +518,7 @@ Item {
                     Behavior on opacity {
                         enabled: root.contentReady && root.shouldAnimate
                         NumberAnimation {
-                            duration: 260
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-
-                    Behavior on scale {
-                        enabled: root.contentReady && root.shouldAnimate
-                        NumberAnimation {
-                            duration: 280
+                            duration: 220
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -863,7 +843,6 @@ Item {
                             visible: !!(blockItem.modelData && blockItem.modelData.type === "table")
                             Layout.fillWidth: true
                             implicitHeight: tableCol.implicitHeight
-                            height: implicitHeight
                             radius: Tokens.rounding.medium
                             color: root.hasCustomColor
                                    ? Qt.tint(Colours.palette.m3surfaceContainerLowest, Qt.alpha(root.accentColor, 0.12))
@@ -915,7 +894,6 @@ Item {
                                     id: tableViewport
                                     Layout.fillWidth: true
                                     implicitHeight: tableGridCol.height
-                                    height: tableGridCol.height
                                     clip: true
 
                                     WheelHandler {

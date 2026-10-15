@@ -62,19 +62,10 @@ StyledRect {
             spacing: Tokens.spacing.small
             visible: opacity > 0.001
             opacity: NotesStore.isEditingNote ? 0.0 : 1.0
-            scale: NotesStore.isEditingNote ? 0.985 : 1.0
-            transformOrigin: Item.Center
 
             Behavior on opacity {
                 NumberAnimation {
                     duration: 200
-                    easing.type: Easing.OutCubic
-                }
-            }
-
-            Behavior on scale {
-                NumberAnimation {
-                    duration: 220
                     easing.type: Easing.OutCubic
                 }
             }
@@ -418,19 +409,10 @@ StyledRect {
             anchors.fill: parent
             visible: opacity > 0.001
             opacity: NotesStore.isEditingNote ? 1.0 : 0.0
-            scale: NotesStore.isEditingNote ? 1.0 : 0.985
-            transformOrigin: Item.Center
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 240
-                    easing.type: Easing.OutCubic
-                }
-            }
-
-            Behavior on scale {
-                NumberAnimation {
-                    duration: 260
+                    duration: 220
                     easing.type: Easing.OutCubic
                 }
             }
