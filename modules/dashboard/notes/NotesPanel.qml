@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.components.effects
 import qs.services
 
 StyledRect {
@@ -126,6 +127,70 @@ StyledRect {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
+
+                readonly property real fadeAmount: 0.08
+                readonly property Flickable flickable: contentItem as Flickable
+
+                property real topFadeOpacity: fadeShouldBeActive(true) ? 0 : 1
+                property real bottomFadeOpacity: fadeShouldBeActive(false) ? 0 : 1
+
+                function fadeShouldBeActive(isStart: bool): bool {
+                    if (!flickable || !flickable.visibleArea)
+                        return false;
+
+                    if (flickable.contentHeight <= flickable.height)
+                        return false;
+
+                    if (isStart)
+                        return flickable.visibleArea.yPosition > 0.001;
+                    return flickable.visibleArea.yPosition + flickable.visibleArea.heightRatio < 0.999;
+                }
+
+                Behavior on topFadeOpacity {
+                    Anim {
+                        type: Anim.SlowEffects
+                    }
+                }
+
+                Behavior on bottomFadeOpacity {
+                    Anim {
+                        type: Anim.SlowEffects
+                    }
+                }
+
+                layer.enabled: true
+                layer.effect: Mask {
+                    maskSource: notesScrollMask
+
+                    Rectangle {
+                        id: notesScrollMask
+
+                        anchors.fill: parent
+                        visible: false
+                        layer.enabled: true
+
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+
+                            GradientStop {
+                                position: 0
+                                color: Qt.rgba(0, 0, 0, notesScrollView.topFadeOpacity)
+                            }
+                            GradientStop {
+                                position: notesScrollView.fadeAmount
+                                color: Qt.rgba(0, 0, 0, 1)
+                            }
+                            GradientStop {
+                                position: 1 - notesScrollView.fadeAmount
+                                color: Qt.rgba(0, 0, 0, 1)
+                            }
+                            GradientStop {
+                                position: 1
+                                color: Qt.rgba(0, 0, 0, notesScrollView.bottomFadeOpacity)
+                            }
+                        }
+                    }
+                }
 
                 ColumnLayout { 
                     width: notesScrollView.availableWidth

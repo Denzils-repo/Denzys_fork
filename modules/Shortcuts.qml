@@ -149,6 +149,16 @@ Scope {
             return screenState[drawer] ? "1" : "0";
         }
 
+        function openNotes(noteId: string): void {
+            const screenState = ShellState.forActive();
+            screenState.dashboard = true;
+            screenState.dashboardTab = (Config.dashboard.showDashboard ? 1 : 0) + (Config.dashboard.showMedia ? 1 : 0);
+            if (noteId && noteId.length > 0) {
+                const found = (NotesStore.notes || []).find(n => n.id === noteId || n.title === noteId);
+                if (found) NotesStore.openNote(found);
+            }
+        }
+
         target: "drawers"
     }
 
