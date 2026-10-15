@@ -300,7 +300,8 @@ Item {
         }
     }
 
-    property bool contentReady: false
+    property bool shouldAnimate: NotesStore.shouldAnimateNoteOpen
+    property bool contentReady: !shouldAnimate
 
     Timer {
         id: popInTimer
@@ -308,10 +309,24 @@ Item {
         repeat: false
         onTriggered: {
             root.contentReady = true;
+            if (NotesStore.shouldAnimateNoteOpen) {
+                NotesStore.shouldAnimateNoteOpen = false;
+            }
+            resetShouldAnimateTimer.restart();
+        }
+    }
+
+    Timer {
+        id: resetShouldAnimateTimer
+        interval: 600
+        repeat: false
+        onTriggered: {
+            root.shouldAnimate = false;
         }
     }
 
     function triggerPopIn() {
+        root.shouldAnimate = true;
         root.contentReady = false;
         popInTimer.restart();
     }
@@ -319,13 +334,14 @@ Item {
     onRawTextChanged: {
         resetScroll();
         Qt.callLater(resetScroll);
-        triggerPopIn();
     }
 
     Component.onCompleted: {
         resetScroll();
         Qt.callLater(resetScroll);
-        triggerPopIn();
+        if (root.shouldAnimate) {
+            triggerPopIn();
+        }
     }
 
     MouseArea {
@@ -419,7 +435,7 @@ Item {
                 transformOrigin: Item.Center
 
                 Behavior on opacity {
-                    enabled: root.contentReady
+                    enabled: root.contentReady && root.shouldAnimate
                     NumberAnimation {
                         duration: 260
                         easing.type: Easing.OutCubic
@@ -427,7 +443,7 @@ Item {
                 }
 
                 Behavior on scale {
-                    enabled: root.contentReady
+                    enabled: root.contentReady && root.shouldAnimate
                     NumberAnimation {
                         duration: 280
                         easing.type: Easing.OutCubic
@@ -472,7 +488,7 @@ Item {
                     required property var modelData
                     required property int index
 
-                    property bool revealed: false
+                    property bool revealed: !root.shouldAnimate
 
                     Connections {
                         target: root
@@ -503,7 +519,7 @@ Item {
                     transform: Translate {
                         y: (root.contentReady && blockItem.revealed) ? 0 : 6
                         Behavior on y {
-                            enabled: root.contentReady
+                            enabled: root.contentReady && root.shouldAnimate
                             NumberAnimation {
                                 duration: 280
                                 easing.type: Easing.OutCubic
@@ -512,7 +528,7 @@ Item {
                     }
 
                     Behavior on opacity {
-                        enabled: root.contentReady
+                        enabled: root.contentReady && root.shouldAnimate
                         NumberAnimation {
                             duration: 260
                             easing.type: Easing.OutCubic
@@ -520,7 +536,7 @@ Item {
                     }
 
                     Behavior on scale {
-                        enabled: root.contentReady
+                        enabled: root.contentReady && root.shouldAnimate
                         NumberAnimation {
                             duration: 280
                             easing.type: Easing.OutCubic

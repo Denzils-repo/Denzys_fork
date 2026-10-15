@@ -241,6 +241,11 @@ StyledRect {
         function onRequestFocusBody(): void {
             root.triggerFocusBody();
         }
+        function onNoteOpened(noteId: string): void {
+            if (markdownLoader && markdownLoader.item && typeof markdownLoader.item.triggerPopIn === "function") {
+                markdownLoader.item.triggerPopIn();
+            }
+        }
     }
 
     onVisibleChanged: {

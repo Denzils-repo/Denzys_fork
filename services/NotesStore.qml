@@ -20,6 +20,8 @@ Singleton {
     // Takeover / editing state for Notes detail view
     property var activeNote: null
     property bool isEditingNote: false
+    property bool shouldAnimateNoteOpen: false
+    signal noteOpened(string noteId)
     signal requestFocusBody()
 
     // Takeover / editing state for Todo detail view
@@ -289,6 +291,7 @@ Singleton {
         if (root.activeNote && root.activeNote.id === id) {
             root.activeNote = null;
             root.isEditingNote = false;
+            root.shouldAnimateNoteOpen = false;
         }
         root.flushSave();
         return true;
@@ -297,6 +300,8 @@ Singleton {
     function openNote(note) {
         root.activeNote = note;
         root.isEditingNote = true;
+        root.shouldAnimateNoteOpen = true;
+        root.noteOpened(note ? (note.id || "") : "");
     }
 
     function createAndOpenNewNote() {
@@ -311,6 +316,7 @@ Singleton {
     function closeNote(autosave, directTitle, directBody, directShapes) {
         if (!root.activeNote) {
             root.isEditingNote = false;
+            root.shouldAnimateNoteOpen = false;
             return;
         }
 
@@ -337,6 +343,7 @@ Singleton {
 
         root.activeNote = null;
         root.isEditingNote = false;
+        root.shouldAnimateNoteOpen = false;
     }
 
     function setViewMode(mode) {
