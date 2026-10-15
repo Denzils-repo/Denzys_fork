@@ -31,6 +31,12 @@ Item {
                 enabled: Config.dashboard.showMedia
             },
             {
+                component: notesComponent,
+                iconName: "edit_note",
+                text: Tr.tr("Notes"),
+                enabled: true
+            },
+            {
                 component: performanceComponent,
                 iconName: "speed",
                 text: Tr.tr("Performance"),
@@ -168,6 +174,12 @@ Item {
                 Media {
                     screenState: root.screenState
                 }
+            }
+
+            Component {
+                id: notesComponent
+
+                NotesTab {}
             }
 
             Component {
