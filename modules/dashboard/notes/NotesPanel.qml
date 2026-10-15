@@ -60,7 +60,7 @@ StyledRect {
             id: listViewContainer
             anchors.fill: parent
             spacing: Tokens.spacing.small
-            visible: opacity > 0.001
+            visible: !NotesStore.isEditingNote || opacity > 0.001
             opacity: NotesStore.isEditingNote ? 0.0 : 1.0
 
             Behavior on opacity {
@@ -407,7 +407,7 @@ StyledRect {
         NoteDetailView {
             id: detailView
             anchors.fill: parent
-            visible: opacity > 0.001
+            visible: NotesStore.isEditingNote || opacity > 0.001
             opacity: NotesStore.isEditingNote ? 1.0 : 0.0
 
             Behavior on opacity {

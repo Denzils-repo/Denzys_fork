@@ -142,7 +142,12 @@ Singleton {
             }
         }
 
-        root.notes = loadedNotes || [];
+        root.notes = (loadedNotes || []).filter(n => {
+            if (!n) return false;
+            const t = (n.title || "").trim();
+            const b = (n.body || "").trim();
+            return t.length > 0 || b.length > 0;
+        });
         root.todos = loadedTodos || [];
         root.trashTodos = loadedTrash || [];
         root.viewMode = loadedMode || "grid";

@@ -162,7 +162,7 @@ StyledRect {
     }
 
     function focusBody() {
-        if (bodyArea && root.isEditing && root.visible) {
+        if (bodyArea && root.isEditing) {
             if (!bodyArea.activeFocus) {
                 bodyArea.forceActiveFocus();
             }
@@ -215,7 +215,7 @@ StyledRect {
         property int attempts: 0
         onTriggered: {
             attempts++;
-            if (bodyArea && root.isEditing && root.visible) {
+            if (bodyArea && root.isEditing) {
                 if (!bodyArea.activeFocus) {
                     bodyArea.forceActiveFocus();
                 }
@@ -254,6 +254,15 @@ StyledRect {
             Qt.callLater(root.resetScroll);
             if (!localTitle && !localBody) {
                 root.triggerFocusBody();
+            }
+        } else {
+            root.syncNow();
+            if (root.activeNote) {
+                const curTitle = titleField ? titleField.text.trim() : (root.localTitle || "").trim();
+                const curBody = bodyArea ? bodyArea.text.trim() : (root.localBody || "").trim();
+                if (curTitle.length === 0 && curBody.length === 0) {
+                    NotesStore.closeNote(false);
+                }
             }
         }
     }
@@ -722,6 +731,7 @@ StyledRect {
                     }
 
                     onTextChanged: {
+                        root.localBody = text;
                         autoSyncTimer.restart();
                     }
                 }

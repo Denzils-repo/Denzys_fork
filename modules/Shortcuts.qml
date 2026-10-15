@@ -120,7 +120,7 @@ Scope {
                 return;
             const screenState = ShellState.forActive();
             screenState.dashboard = true;
-            screenState.dashboardTab = (Config.dashboard.showDashboard ? 1 : 0) + (Config.dashboard.showMedia ? 1 : 0);
+            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
             NotesStore.createAndOpenNewNote();
         }
     }
@@ -131,6 +131,9 @@ Scope {
                 if (root.hasFullscreen && ["launcher", "session", "dashboard"].includes(drawer))
                     return;
                 const screenState = ShellState.forActive();
+                if (drawer === "dashboard" && screenState.dashboard && NotesStore.isEditingNote) {
+                    NotesStore.closeNote(true);
+                }
                 screenState[drawer] = !screenState[drawer];
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
@@ -152,11 +155,18 @@ Scope {
         function openNotes(noteId: string): void {
             const screenState = ShellState.forActive();
             screenState.dashboard = true;
-            screenState.dashboardTab = (Config.dashboard.showDashboard ? 1 : 0) + (Config.dashboard.showMedia ? 1 : 0);
+            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
             if (noteId && noteId.length > 0) {
                 const found = (NotesStore.notes || []).find(n => n.id === noteId || n.title === noteId);
                 if (found) NotesStore.openNote(found);
             }
+        }
+
+        function newNote(): void {
+            const screenState = ShellState.forActive();
+            screenState.dashboard = true;
+            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
+            NotesStore.createAndOpenNewNote();
         }
 
         target: "drawers"
