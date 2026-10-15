@@ -300,14 +300,32 @@ Item {
         }
     }
 
+    property bool contentReady: false
+
+    Timer {
+        id: popInTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            root.contentReady = true;
+        }
+    }
+
+    function triggerPopIn() {
+        root.contentReady = false;
+        popInTimer.restart();
+    }
+
     onRawTextChanged: {
         resetScroll();
         Qt.callLater(resetScroll);
+        triggerPopIn();
     }
 
     Component.onCompleted: {
         resetScroll();
         Qt.callLater(resetScroll);
+        triggerPopIn();
     }
 
     MouseArea {
@@ -396,6 +414,27 @@ Item {
                 implicitHeight: 140
                 visible: root.blocks.length === 0
 
+                opacity: root.contentReady ? 1.0 : 0.0
+                scale: root.contentReady ? 1.0 : 0.96
+                transformOrigin: Item.Center
+
+                Behavior on opacity {
+                    enabled: root.contentReady
+                    NumberAnimation {
+                        duration: 220
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Behavior on scale {
+                    enabled: root.contentReady
+                    NumberAnimation {
+                        duration: 240
+                        easing.type: Easing.OutBack
+                        easing.overshoot: 1.08
+                    }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
@@ -432,8 +471,63 @@ Item {
                 delegate: Item {
                     id: blockItem
                     required property var modelData
+                    required property int index
+
+                    property bool revealed: false
+
+                    Connections {
+                        target: root
+                        function onContentReadyChanged() {
+                            if (!root.contentReady) {
+                                blockItem.revealed = false;
+                            }
+                        }
+                    }
+
+                    Timer {
+                        id: revealTimer
+                        interval: Math.min(blockItem.index * 22, 160)
+                        running: root.contentReady && !blockItem.revealed
+                        repeat: false
+                        onTriggered: {
+                            blockItem.revealed = true;
+                        }
+                    }
+
                     Layout.fillWidth: true
                     implicitHeight: blockCol.implicitHeight
+
+                    opacity: (root.contentReady && blockItem.revealed) ? 1.0 : 0.0
+                    scale: (root.contentReady && blockItem.revealed) ? 1.0 : 0.97
+                    transformOrigin: Item.Center
+
+                    transform: Translate {
+                        y: (root.contentReady && blockItem.revealed) ? 0 : 8
+                        Behavior on y {
+                            enabled: root.contentReady
+                            NumberAnimation {
+                                duration: 240
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+
+                    Behavior on opacity {
+                        enabled: root.contentReady
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
+                    Behavior on scale {
+                        enabled: root.contentReady
+                        NumberAnimation {
+                            duration: 260
+                            easing.type: Easing.OutBack
+                            easing.overshoot: 1.08
+                        }
+                    }
 
                     function calculateTargetOffset(mouseY) {
                         const data = blockItem.modelData;
