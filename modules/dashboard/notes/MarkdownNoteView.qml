@@ -304,7 +304,7 @@ Item {
 
     Timer {
         id: popInTimer
-        interval: 350
+        interval: 280
         repeat: false
         onTriggered: {
             root.contentReady = true;
@@ -415,13 +415,13 @@ Item {
                 visible: root.blocks.length === 0
 
                 opacity: root.contentReady ? 1.0 : 0.0
-                scale: root.contentReady ? 1.0 : 0.96
+                scale: root.contentReady ? 1.0 : 0.985
                 transformOrigin: Item.Center
 
                 Behavior on opacity {
                     enabled: root.contentReady
                     NumberAnimation {
-                        duration: 220
+                        duration: 260
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -429,9 +429,8 @@ Item {
                 Behavior on scale {
                     enabled: root.contentReady
                     NumberAnimation {
-                        duration: 240
-                        easing.type: Easing.OutBack
-                        easing.overshoot: 1.08
+                        duration: 280
+                        easing.type: Easing.OutCubic
                     }
                 }
 
@@ -486,7 +485,7 @@ Item {
 
                     Timer {
                         id: revealTimer
-                        interval: Math.min(blockItem.index * 22, 160)
+                        interval: Math.min(blockItem.index * 16, 120)
                         running: root.contentReady && !blockItem.revealed
                         repeat: false
                         onTriggered: {
@@ -498,15 +497,15 @@ Item {
                     implicitHeight: blockCol.implicitHeight
 
                     opacity: (root.contentReady && blockItem.revealed) ? 1.0 : 0.0
-                    scale: (root.contentReady && blockItem.revealed) ? 1.0 : 0.97
-                    transformOrigin: Item.Center
+                    scale: (root.contentReady && blockItem.revealed) ? 1.0 : 0.99
+                    transformOrigin: Item.TopLeft
 
                     transform: Translate {
-                        y: (root.contentReady && blockItem.revealed) ? 0 : 8
+                        y: (root.contentReady && blockItem.revealed) ? 0 : 6
                         Behavior on y {
                             enabled: root.contentReady
                             NumberAnimation {
-                                duration: 240
+                                duration: 280
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -515,7 +514,7 @@ Item {
                     Behavior on opacity {
                         enabled: root.contentReady
                         NumberAnimation {
-                            duration: 200
+                            duration: 260
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -523,9 +522,8 @@ Item {
                     Behavior on scale {
                         enabled: root.contentReady
                         NumberAnimation {
-                            duration: 260
-                            easing.type: Easing.OutBack
-                            easing.overshoot: 1.08
+                            duration: 280
+                            easing.type: Easing.OutCubic
                         }
                     }
 

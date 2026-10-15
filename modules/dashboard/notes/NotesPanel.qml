@@ -60,7 +60,24 @@ StyledRect {
             id: listViewContainer
             anchors.fill: parent
             spacing: Tokens.spacing.small
-            visible: !NotesStore.isEditingNote
+            visible: opacity > 0.001
+            opacity: NotesStore.isEditingNote ? 0.0 : 1.0
+            scale: NotesStore.isEditingNote ? 0.985 : 1.0
+            transformOrigin: Item.Center
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutCubic
+                }
+            }
 
             // Header Row
             RowLayout {
@@ -399,7 +416,24 @@ StyledRect {
         NoteDetailView {
             id: detailView
             anchors.fill: parent
-            visible: NotesStore.isEditingNote
+            visible: opacity > 0.001
+            opacity: NotesStore.isEditingNote ? 1.0 : 0.0
+            scale: NotesStore.isEditingNote ? 1.0 : 0.985
+            transformOrigin: Item.Center
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 240
+                    easing.type: Easing.OutCubic
+                }
+            }
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 260
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
     }
 }

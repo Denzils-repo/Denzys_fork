@@ -591,7 +591,15 @@ StyledRect {
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.large
                 active: !root.isEditing
-                visible: !root.isEditing
+                visible: opacity > 0.001
+                opacity: !root.isEditing ? 1.0 : 0.0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 sourceComponent: MarkdownNoteView {
                     rawText: root.localBody
@@ -615,7 +623,15 @@ StyledRect {
                 id: bodyScrollView
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.large
-                visible: root.isEditing
+                visible: opacity > 0.001
+                opacity: root.isEditing ? 1.0 : 0.0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 180
+                        easing.type: Easing.OutCubic
+                    }
+                }
                 clip: true
 
                 readonly property real fadeAmount: 0.08
