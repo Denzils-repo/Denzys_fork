@@ -784,7 +784,6 @@ Item {
                                             const codeContent = (blockItem.modelData && blockItem.modelData.content) || "";
                                             if (!codeContent) return;
                                             Quickshell.clipboardText = codeContent;
-                                            Quickshell.execDetached(["wl-copy", codeContent]);
                                             copyBtn.copied = true;
                                             copyFeedbackTimer.restart();
                                             Toaster.toast(qsTr("Code copied to clipboard"), "", "content_copy");

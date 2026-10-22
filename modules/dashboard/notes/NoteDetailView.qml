@@ -454,7 +454,6 @@ StyledRect {
                             if (textToCopy.length === 0)
                                 return;
                             Quickshell.clipboardText = textToCopy;
-                            Quickshell.execDetached(["wl-copy", textToCopy]);
                             Toaster.toast(qsTr("Copied to clipboard"), (root.localTitle && root.localTitle.trim() !== "Untitled" ? root.localTitle : qsTr("Note")), "content_copy");
                             copyFeedbackTimer.restart();
                         }
