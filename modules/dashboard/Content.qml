@@ -25,16 +25,16 @@ Item {
                 enabled: Config.dashboard.showDashboard
             },
             {
-                component: mediaComponent,
-                iconName: "queue_music",
-                text: Tr.tr("Media"),
-                enabled: Config.dashboard.showMedia
-            },
-            {
                 component: notesComponent,
                 iconName: "edit_note",
                 text: Tr.tr("Notes"),
                 enabled: true
+            },
+            {
+                component: mediaComponent,
+                iconName: "queue_music",
+                text: Tr.tr("Media"),
+                enabled: Config.dashboard.showMedia
             },
             {
                 component: performanceComponent,

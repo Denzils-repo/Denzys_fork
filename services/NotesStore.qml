@@ -20,6 +20,8 @@ Singleton {
     // Takeover / editing state for Notes detail view
     property var activeNote: null
     property bool isEditingNote: false
+    property bool shouldAnimateNoteOpen: false
+    signal noteOpened(string noteId)
     signal requestFocusBody()
 
     // Takeover / editing state for Todo detail view
@@ -140,7 +142,12 @@ Singleton {
             }
         }
 
-        root.notes = loadedNotes || [];
+        root.notes = (loadedNotes || []).filter(n => {
+            if (!n) return false;
+            const t = (n.title || "").trim();
+            const b = (n.body || "").trim();
+            return t.length > 0 || b.length > 0;
+        });
         root.todos = loadedTodos || [];
         root.trashTodos = loadedTrash || [];
         root.viewMode = loadedMode || "grid";
@@ -289,6 +296,7 @@ Singleton {
         if (root.activeNote && root.activeNote.id === id) {
             root.activeNote = null;
             root.isEditingNote = false;
+            root.shouldAnimateNoteOpen = false;
         }
         root.flushSave();
         return true;
@@ -297,6 +305,8 @@ Singleton {
     function openNote(note) {
         root.activeNote = note;
         root.isEditingNote = true;
+        root.shouldAnimateNoteOpen = true;
+        root.noteOpened(note ? (note.id || "") : "");
     }
 
     function createAndOpenNewNote() {
@@ -311,6 +321,7 @@ Singleton {
     function closeNote(autosave, directTitle, directBody, directShapes) {
         if (!root.activeNote) {
             root.isEditingNote = false;
+            root.shouldAnimateNoteOpen = false;
             return;
         }
 
@@ -337,6 +348,7 @@ Singleton {
 
         root.activeNote = null;
         root.isEditingNote = false;
+        root.shouldAnimateNoteOpen = false;
     }
 
     function setViewMode(mode) {

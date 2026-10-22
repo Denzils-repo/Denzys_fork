@@ -243,7 +243,6 @@ StyledRect {
                                 id: newTodoInput
                                 Layout.fillWidth: true
                                 maximumLength: 300
-                                enabled: !root.calendarPickerOpen
                                 placeholderText: qsTr("Add a new to-do…")
                                 placeholderTextColor: Colours.palette.m3onSurfaceVariant
                                 font: Tokens.font.body.medium
@@ -417,6 +416,9 @@ StyledRect {
                             onDateSelected: (dateStr) => {
                                 root.selectedNewDue = (root.selectedNewDue === dateStr ? "" : dateStr);
                                 root.newTodoRepeating = false;
+                                Qt.callLater(() => {
+                                    newTodoInput.forceActiveFocus();
+                                });
                             }
                             onCancelled: {
                                 root.calendarPickerOpen = false;
@@ -435,6 +437,70 @@ StyledRect {
                     Layout.fillHeight: !root.calendarPickerOpen
                     visible: !root.calendarPickerOpen
                     clip: true
+
+                    readonly property real fadeAmount: 0.08
+                    readonly property Flickable flickable: contentItem as Flickable
+
+                    property real topFadeOpacity: fadeShouldBeActive(true) ? 0 : 1
+                    property real bottomFadeOpacity: fadeShouldBeActive(false) ? 0 : 1
+
+                    function fadeShouldBeActive(isStart: bool): bool {
+                        if (!flickable || !flickable.visibleArea)
+                            return false;
+
+                        if (flickable.contentHeight <= flickable.height)
+                            return false;
+
+                        if (isStart)
+                            return flickable.visibleArea.yPosition > 0.001;
+                        return flickable.visibleArea.yPosition + flickable.visibleArea.heightRatio < 0.999;
+                    }
+
+                    Behavior on topFadeOpacity {
+                        Anim {
+                            type: Anim.SlowEffects
+                        }
+                    }
+
+                    Behavior on bottomFadeOpacity {
+                        Anim {
+                            type: Anim.SlowEffects
+                        }
+                    }
+
+                    layer.enabled: true
+                    layer.effect: Mask {
+                        maskSource: scrollMask
+
+                        Rectangle {
+                            id: scrollMask
+
+                            anchors.fill: parent
+                            visible: false
+                            layer.enabled: true
+
+                            gradient: Gradient {
+                                orientation: Gradient.Vertical
+
+                                GradientStop {
+                                    position: 0
+                                    color: Qt.rgba(0, 0, 0, todoScrollView.topFadeOpacity)
+                                }
+                                GradientStop {
+                                    position: todoScrollView.fadeAmount
+                                    color: Qt.rgba(0, 0, 0, 1)
+                                }
+                                GradientStop {
+                                    position: 1 - todoScrollView.fadeAmount
+                                    color: Qt.rgba(0, 0, 0, 1)
+                                }
+                                GradientStop {
+                                    position: 1
+                                    color: Qt.rgba(0, 0, 0, todoScrollView.bottomFadeOpacity)
+                                }
+                            }
+                        }
+                    }
 
                     ColumnLayout {
                         width: todoScrollView.availableWidth
@@ -673,12 +739,13 @@ StyledRect {
                                     spacing: Tokens.spacing.small
 
                                     // Custom Checkbox with M3Shapes Morphing Animation
-                                    CustomMouseArea {
+                                    MouseArea {
                                         id: checkMouseArea
                                         Layout.alignment: Qt.AlignVCenter
                                         implicitWidth: 22
                                         implicitHeight: 22
                                         cursorShape: Qt.PointingHandCursor
+                                        hoverEnabled: true
                                         onClicked: {
                                             if (root.showTrash) {
                                                 NotesStore.restoreTodo(todoRow.todoId);
@@ -740,7 +807,7 @@ StyledRect {
                                     }
 
                                     // Label text with click to open view mode & strikethrough / scratching overlay
-                                    CustomMouseArea {
+                                    MouseArea {
                                         Layout.fillWidth: true
                                         Layout.alignment: Qt.AlignVCenter
                                         implicitHeight: Math.max(22, todoLabel.implicitHeight)
@@ -874,6 +941,7 @@ StyledRect {
 
                                     // Streak Display (Active view)
                                     StyledRect {
+                                        id: streakPill
                                         visible: !root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating) && (todoRow.modelData.streak || 0) > 0
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
@@ -881,52 +949,23 @@ StyledRect {
                                         implicitWidth: streakDetailRow.implicitWidth + 12
                                         color: Colours.palette.m3tertiaryContainer
 
+                                        HoverHandler {
+                                            id: streakPillHover
+                                        }
+
                                         RowLayout {
                                             id: streakDetailRow
                                             anchors.centerIn: parent
                                             spacing: 3
 
-                                            Item {
+                                            StreakFlame {
+                                                id: streakFireAnim
                                                 Layout.alignment: Qt.AlignVCenter
-                                                implicitWidth: 16
-                                                implicitHeight: 16
-
-                                                AnimatedImage {
-                                                    id: streakFireAnim
-                                                    anchors.fill: parent
-                                                    source: Quickshell.shellPath("assets/fire.webp")
-                                                    fillMode: Image.PreserveAspectFit
-                                                    smooth: true
-                                                    mipmap: true
-                                                    asynchronous: true
-
-                                                    property bool shouldComplete: false
-                                                    playing: todoRow.isRowHovered || shouldComplete
-                                                    paused: !playing
-
-                                                    onCurrentFrameChanged: {
-                                                        if (currentFrame === frameCount - 1 || (currentFrame === 0 && !todoRow.isRowHovered && shouldComplete)) {
-                                                            if (!todoRow.isRowHovered) {
-                                                                shouldComplete = false;
-                                                                currentFrame = 0;
-                                                            }
-                                                        }
-                                                    }
-
-                                                    Connections {
-                                                        target: todoRow
-                                                        function onIsRowHoveredChanged() {
-                                                            if (todoRow.isRowHovered) {
-                                                                streakFireAnim.shouldComplete = true;
-                                                            }
-                                                        }
-                                                    }
-
-                                                    layer.enabled: true
-                                                    layer.effect: Colouriser {
-                                                        colorizationColor: Colours.palette.m3onTertiaryContainer
-                                                    }
-                                                }
+                                                implicitWidth: 18
+                                                implicitHeight: 18
+                                                outerColor: Colours.palette.m3onTertiaryContainer
+                                                innerColor: Colours.palette.m3tertiaryContainer
+                                                autoplay: todoRow.isRowHovered || streakPillHover.hovered
                                             }
 
                                             StyledText {
@@ -937,20 +976,21 @@ StyledRect {
                                         }
                                     }
 
-                                    // Repeat Icon (Active view) - hidden when streak > 0
+                                    // Repeating Pill (Active view - shown when streak is 0 or unstreaked)
                                     StyledRect {
                                         visible: !root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating) && (todoRow.modelData.streak || 0) === 0
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
-                                        implicitHeight: 18
-                                        implicitWidth: 18
+                                        implicitHeight: 20
+                                        implicitWidth: repeatingPillText.implicitWidth + 12
                                         color: Colours.palette.m3tertiaryContainer
 
-                                        MaterialIcon {
-                                            text: "repeat"
-                                            fontStyle: Tokens.font.icon.small
-                                            color: Colours.palette.m3onTertiaryContainer
+                                        StyledText {
+                                            id: repeatingPillText
                                             anchors.centerIn: parent
+                                            text: qsTr("Repeating")
+                                            font: Tokens.font.label.small
+                                            color: Colours.palette.m3onTertiaryContainer
                                         }
                                     }
 
@@ -959,8 +999,8 @@ StyledRect {
                                         visible: root.showTrash && !!(todoRow.modelData && todoRow.modelData.repeating)
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
-                                        implicitHeight: 18
-                                        implicitWidth: resettingText.implicitWidth + 10
+                                        implicitHeight: 20
+                                        implicitWidth: resettingText.implicitWidth + 12
                                         color: Qt.alpha(Colours.palette.m3secondary, 0.22)
 
                                         StyledText {
@@ -977,15 +1017,15 @@ StyledRect {
                                         visible: !root.showTrash && todoRow.duePillInfo !== null && !(todoRow.modelData && todoRow.modelData.repeating)
                                         Layout.alignment: Qt.AlignVCenter
                                         radius: Tokens.rounding.full
-                                        implicitHeight: 18
-                                        implicitWidth: dueText.implicitWidth + 10
+                                        implicitHeight: 20
+                                        implicitWidth: dueText.implicitWidth + 12
                                         color: {
-                                            if (!todoRow.duePillInfo) return Colours.palette.m3surfaceContainerHigh;
+                                            if (!todoRow.duePillInfo) return Colours.palette.m3surfaceContainerHighest;
                                             switch (todoRow.duePillInfo.status) {
                                                 case "overdue": return Colours.palette.m3error;
                                                 case "today": return Colours.palette.m3tertiary;
-                                                case "tomorrow": return Colours.palette.m3secondaryContainer;
-                                                default: return Colours.palette.m3surfaceContainerHigh;
+                                                case "tomorrow": return Colours.palette.m3secondary;
+                                                default: return Colours.palette.m3surfaceContainerHighest;
                                             }
                                         }
 
@@ -999,7 +1039,7 @@ StyledRect {
                                                 switch (todoRow.duePillInfo.status) {
                                                     case "overdue": return Colours.palette.m3onError;
                                                     case "today": return Colours.palette.m3onTertiary;
-                                                    case "tomorrow": return Colours.palette.m3onSecondaryContainer;
+                                                    case "tomorrow": return Colours.palette.m3onSecondary;
                                                     default: return Colours.palette.m3onSurfaceVariant;
                                                 }
                                             }

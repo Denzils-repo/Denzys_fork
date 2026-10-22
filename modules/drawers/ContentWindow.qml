@@ -117,7 +117,7 @@ StyledWindow {
             const conf = root.contentItem.Config;
             if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
                 return true;
-            if (s.dashboard && conf.dashboard.enabled && (!conf.dashboard.showOnHover || NotesStore.isEditingNote))
+            if ((!conf.dashboard.showOnHover || NotesStore.isEditingNote) && s.dashboard && conf.dashboard.enabled)
                 return true;
             if (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
                 return true;
@@ -129,6 +129,9 @@ StyledWindow {
             root.screenState.session = false;
             root.screenState.sidebar = false;
             root.screenState.dashboard = false;
+            if (NotesStore.isEditingNote) {
+                NotesStore.closeNote(true);
+            }
             panels.popouts.hasCurrent = false;
             bar.closeTray();
         }

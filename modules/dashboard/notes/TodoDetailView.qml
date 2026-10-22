@@ -340,11 +340,11 @@ Item {
                 implicitHeight: 20
                 implicitWidth: currentDueText.implicitWidth + 12
                 color: {
-                    if (!root.currentDuePill) return Colours.palette.m3surfaceContainerHigh;
+                    if (!root.currentDuePill) return Colours.palette.m3surfaceContainerHighest;
                     switch (root.currentDuePill.status) {
                         case "overdue": return Colours.palette.m3error;
                         case "today": return Colours.palette.m3tertiary;
-                        case "tomorrow": return Colours.palette.m3secondaryContainer;
+                        case "tomorrow": return Colours.palette.m3secondary;
                         default: return Colours.palette.m3surfaceContainerHighest;
                     }
                 }
@@ -359,8 +359,8 @@ Item {
                         switch (root.currentDuePill.status) {
                             case "overdue": return Colours.palette.m3onError;
                             case "today": return Colours.palette.m3onTertiary;
-                            case "tomorrow": return Colours.palette.m3onSecondaryContainer;
-                            default: return Colours.palette.m3onSurface;
+                            case "tomorrow": return Colours.palette.m3onSecondary;
+                            default: return Colours.palette.m3onSurfaceVariant;
                         }
                     }
                 }
@@ -423,47 +423,14 @@ Item {
                     anchors.centerIn: parent
                     spacing: 3
 
-                    Item {
+                    StreakFlame {
+                        id: streakDetailFireAnim
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: 16
-                        implicitHeight: 16
-
-                        AnimatedImage {
-                            id: streakDetailFireAnim
-                            anchors.fill: parent
-                            source: Quickshell.shellPath("assets/fire.webp")
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                            mipmap: true
-                            asynchronous: true
-
-                            property bool shouldComplete: false
-                            playing: streakDetailHover.hovered || shouldComplete
-                            paused: !playing
-
-                            onCurrentFrameChanged: {
-                                if (currentFrame === frameCount - 1 || (currentFrame === 0 && !streakDetailHover.hovered && shouldComplete)) {
-                                    if (!streakDetailHover.hovered) {
-                                        shouldComplete = false;
-                                        currentFrame = 0;
-                                    }
-                                }
-                            }
-
-                            Connections {
-                                target: streakDetailHover
-                                function onHoveredChanged() {
-                                    if (streakDetailHover.hovered) {
-                                        streakDetailFireAnim.shouldComplete = true;
-                                    }
-                                }
-                            }
-
-                            layer.enabled: true
-                            layer.effect: Colouriser {
-                                colorizationColor: Colours.palette.m3onTertiaryContainer
-                            }
-                        }
+                        implicitWidth: 18
+                        implicitHeight: 18
+                        outerColor: Colours.palette.m3onTertiaryContainer
+                        innerColor: Colours.palette.m3tertiaryContainer
+                        autoplay: streakDetailHover.hovered
                     }
 
                     StyledText {
@@ -545,6 +512,70 @@ Item {
                 anchors.fill: parent
                 visible: !root.calendarOpen
                 clip: true
+
+                readonly property real fadeAmount: 0.08
+                readonly property Flickable flickable: contentItem as Flickable
+
+                property real topFadeOpacity: fadeShouldBeActive(true) ? 0 : 1
+                property real bottomFadeOpacity: fadeShouldBeActive(false) ? 0 : 1
+
+                function fadeShouldBeActive(isStart: bool): bool {
+                    if (!flickable || !flickable.visibleArea)
+                        return false;
+
+                    if (flickable.contentHeight <= flickable.height)
+                        return false;
+
+                    if (isStart)
+                        return flickable.visibleArea.yPosition > 0.001;
+                    return flickable.visibleArea.yPosition + flickable.visibleArea.heightRatio < 0.999;
+                }
+
+                Behavior on topFadeOpacity {
+                    Anim {
+                        type: Anim.SlowEffects
+                    }
+                }
+
+                Behavior on bottomFadeOpacity {
+                    Anim {
+                        type: Anim.SlowEffects
+                    }
+                }
+
+                layer.enabled: true
+                layer.effect: Mask {
+                    maskSource: todoTextScrollMask
+
+                    Rectangle {
+                        id: todoTextScrollMask
+
+                        anchors.fill: parent
+                        visible: false
+                        layer.enabled: true
+
+                        gradient: Gradient {
+                            orientation: Gradient.Vertical
+
+                            GradientStop {
+                                position: 0
+                                color: Qt.rgba(0, 0, 0, textScrollView.topFadeOpacity)
+                            }
+                            GradientStop {
+                                position: textScrollView.fadeAmount
+                                color: Qt.rgba(0, 0, 0, 1)
+                            }
+                            GradientStop {
+                                position: 1 - textScrollView.fadeAmount
+                                color: Qt.rgba(0, 0, 0, 1)
+                            }
+                            GradientStop {
+                                position: 1
+                                color: Qt.rgba(0, 0, 0, textScrollView.bottomFadeOpacity)
+                            }
+                        }
+                    }
+                }
 
                 TextArea {
                     id: todoTextArea
