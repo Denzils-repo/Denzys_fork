@@ -29,11 +29,7 @@ Item {
         anchors.topMargin: Tokens.sizes.dashboard.tabIndicatorSpacing
 
         currentIndex: root.screenState.dashboardTab
-        onCurrentIndexChanged: {
-            if (root.screenState.dashboardTab !== currentIndex) {
-                root.screenState.dashboardTab = currentIndex;
-            }
-        }
+        onCurrentIndexChanged: root.screenState.dashboardTab = currentIndex
 
         implicitHeight: contentHeight
         background: null
@@ -59,24 +55,6 @@ Item {
         }
     }
 
-    Connections {
-        target: root.screenState
-        function onDashboardTabChanged(): void {
-            if (bar.count > 0 && root.screenState.dashboardTab >= 0 && root.screenState.dashboardTab < bar.count) {
-                if (bar.currentIndex !== root.screenState.dashboardTab) {
-                    bar.currentIndex = root.screenState.dashboardTab;
-                }
-            }
-        }
-    }
-
-    Binding {
-        target: bar
-        property: "currentIndex"
-        value: root.screenState.dashboardTab
-        when: bar.count > 0 && root.screenState.dashboardTab >= 0 && root.screenState.dashboardTab < bar.count
-    }
-
     Item {
         id: indicator
 
@@ -85,7 +63,7 @@ Item {
 
         implicitWidth: {
             const tab = bar.currentItem;
-            if (tab && tab.implicitWidth > 0)
+            if (tab)
                 return tab.implicitWidth;
             const width = (root.nonAnimWidth - bar.spacing * (bar.count - 1)) / bar.count;
             return width;
@@ -94,8 +72,6 @@ Item {
 
         x: {
             const tab = bar.currentItem;
-            if (tab && tab.width > 0)
-                return tab.x + (tab.width - (tab.implicitWidth > 0 ? tab.implicitWidth : tab.width)) / 2;
             const width = (root.nonAnimWidth - bar.spacing * (bar.count - 1)) / bar.count;
             const tabWidth = tab?.implicitWidth ?? width;
             return width * bar.currentIndex + (width - tabWidth) / 2;
