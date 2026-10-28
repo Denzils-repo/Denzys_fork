@@ -110,6 +110,13 @@ Scope {
         }
     }
 
+    function getNotesTabIndex(): int {
+        if (typeof CustomTabs !== "undefined" && typeof CustomTabs.getNotesTabIndex === "function") {
+            return CustomTabs.getNotesTabIndex();
+        }
+        return Config.dashboard.showDashboard ? 1 : 0;
+    }
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
@@ -119,8 +126,8 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const screenState = ShellState.forActive();
+            screenState.dashboardTab = root.getNotesTabIndex();
             screenState.dashboard = true;
-            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
             NotesStore.createAndOpenNewNote();
         }
     }
@@ -154,8 +161,8 @@ Scope {
 
         function openNotes(noteId: string): void {
             const screenState = ShellState.forActive();
+            screenState.dashboardTab = root.getNotesTabIndex();
             screenState.dashboard = true;
-            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
             if (noteId && noteId.length > 0) {
                 const found = (NotesStore.notes || []).find(n => n.id === noteId || n.title === noteId);
                 if (found) NotesStore.openNote(found);
@@ -164,8 +171,8 @@ Scope {
 
         function newNote(): void {
             const screenState = ShellState.forActive();
+            screenState.dashboardTab = root.getNotesTabIndex();
             screenState.dashboard = true;
-            screenState.dashboardTab = Config.dashboard.showDashboard ? 1 : 0;
             NotesStore.createAndOpenNewNote();
         }
 
